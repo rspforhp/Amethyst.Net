@@ -1,17 +1,10 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace Parser;
 
 public class ParserInstance
 {
-    public readonly Dictionary<string, AbstractFileParser> FileAssociations = new();
-
-    public T RegisterFileParser<T>() where T : AbstractFileParser, new()
-    {
-        var n = new T();
-        FileAssociations[n.Extension] = n;
-        return n;
-    }
 
     private static ReadOnlySpan<char>  GetFileExtension(ReadOnlySpan<char>  path)
     {
@@ -24,15 +17,7 @@ public class ParserInstance
 
     public void ParseFile(string path)
     {
-        var ext = GetFileExtension(path);
-        if (!FileAssociations.TryGetValue(ext.ToString(), out var parser))
-            throw new Exception($"No matching parser for file with extension .{ext}");
-        parser.ParseFile(path);
-    }
-    public void ParseFile(string path)
-    {
         FileReader.OpenFile(path);
-        Parse();
     }
 
     public class SimpleFileReader
@@ -71,12 +56,12 @@ public class ParserInstance
             return s;
         }
 
-        public string Peek(AbstractRule rule)
+        public string Peek(Func<char,bool> rule)
         {
             StringBuilder builder = new StringBuilder();
             var c = Peek();
-            if (rule.IsValidChar(c)) Advance();
-            while (rule.IsValidChar(c))
+            if (rule(c)) Advance();
+            while (rule(c))
             {
                 builder.Append(c);
                 c = Read();
@@ -84,7 +69,7 @@ public class ParserInstance
             Retreat(builder.Length+1);
             return builder.ToString();
         }
-        public string Read(AbstractRule rule)
+        public string Read(Func<char,bool> rule)
         {
             var peek = Peek(rule);
             Advance(peek.Length);

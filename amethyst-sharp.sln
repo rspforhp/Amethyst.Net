@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Parser", "Parser\Parser.csproj", "{2536CECC-C0BF-4BC1-BA90-D8B17D4E079F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amethyst", "Amethyst\Amethyst.csproj", "{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}"
 EndProject
 Global
@@ -10,10 +8,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2536CECC-C0BF-4BC1-BA90-D8B17D4E079F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2536CECC-C0BF-4BC1-BA90-D8B17D4E079F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2536CECC-C0BF-4BC1-BA90-D8B17D4E079F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2536CECC-C0BF-4BC1-BA90-D8B17D4E079F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Release|Any CPU.ActiveCfg = Release|Any CPU
