@@ -1,10 +1,10 @@
 public static class AProgram
 {
-public static System.Void main(int test1,System.Int32 test2)
+public static entry System.Void main()
 {
     System.Console.WriteLine("hello \"world\" ");
 }
-public static void main2()
+public static void main2(int test1,System.Int32 test2)
 {
 }
 }

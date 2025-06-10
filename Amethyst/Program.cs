@@ -10,6 +10,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using AsmResolver.DotNet.Bundles;
+using HarmonyLib;
 
 namespace Amethyst;
 public static class Extensions
@@ -50,6 +51,7 @@ public static class Program
         PersistedAssemblyBuilder asm = new PersistedAssemblyBuilder(new AssemblyName(asmName), typeof(object).Assembly);
         var mainModule = asm.DefineDynamicModule(asmName);
 
+        MethodInfo entryPoint = null;
         foreach (var classStructure in sh.ElementList)
         {
             var typeBuilder = mainModule.DefineType(classStructure.MyIdentifier.Identifier, TypeAttributes.Class | TypeAttributes.Public);
@@ -65,9 +67,90 @@ public static class Program
                                 .Select(Type.GetType).ToArray());
                        var il = m.GetILGenerator();
                        il.BeginScope();
+
+                       foreach (var expr in func.FuncBody.ElementList)
+                       {
+                           switch (expr.Element)
+                           {
+                               case FunctionInvokationExpressionStructure invok:
+                                   var methodName = invok.MethodIdentifier[^1];
+                                   var typeName = invok.MethodIdentifier[..^1];
+                                   if (string.IsNullOrEmpty(typeName.FullIdentifier))
+                                   {
+                                       //TODO: either inside the this type, or was got via using's im yet to implement
+                                       Debugger.Break();
+                                   }
+
+                                   //TODO: get method with params
+                                   List<Type> paramTypes = new();
+                                   foreach (var para in invok.Parameters.ElementList)
+                                   {
+                                       switch (para.Element)
+                                       {
+                                           case LiteralStructure lit:
+
+                                               switch (lit.Element)
+                                               {
+                                                   case StringLiteralStructure str:
+                                                       paramTypes.Add(typeof(string));
+                                                       break;
+                                                   case NumberLiteralStructure num:
+                                                       Debugger.Break();
+                                                       break;
+                                               }
+                                               break;
+                                           case IdentifierStructure id:
+                                               Debugger.Break();
+                                               break;
+                                       }                                       
+                                   }
+                                   
+                                   Type theType = AccessTools.TypeByName(typeName.FullIdentifier);
+                                   if (theType == null) throw new TypeLoadException("Type not found!");
+                                   
+                                   var gotMethod = AccessTools.Method(theType,methodName.Identifier,paramTypes.ToArray());
+                                   
+                                   foreach (var para in invok.Parameters.ElementList)
+                                   {
+                                       switch (para.Element)
+                                       {
+                                           case LiteralStructure lit:
+
+                                               switch (lit.Element)
+                                               {
+                                                   case StringLiteralStructure str:
+                                                       il.Emit(OpCodes.Ldstr, str.StringInterpretation);
+                                                       break;
+                                                   case NumberLiteralStructure num:
+                                                       Debugger.Break();
+                                                       break;
+                                               }
+                                               break;
+                                           case IdentifierStructure id:
+                                               Debugger.Break();
+                                               break;
+                                       }                                       
+                                   }
+                                   
+                                   il.EmitCall(OpCodes.Call, gotMethod,null);
+                                   
+                                   Debugger.Break();
+                                   break;
+                           }
+                           
+                           
+                           
+                       }
+                       
                        
                        il.Emit(OpCodes.Ret);
                        il.EndScope();
+
+                       if (func.MyModifiers.ElementList.Any(a => a.Value == MethodModifiers.entry))
+                       {
+                           if (entryPoint != null) throw new Exception("Multiple entry points are not supported!");
+                           entryPoint = m;
+                       }
                        break;
                     case FieldStructure field:
                         break;
@@ -77,6 +160,7 @@ public static class Program
             typeBuilder.CreateType();
         }
         
+        /*
         var program = mainModule.DefineType("Program", TypeAttributes.Class | TypeAttributes.Public);
         var main=program.DefineMethod("Main", MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.HideBySig);
         ILGenerator il2 = main.GetILGenerator();
@@ -84,8 +168,9 @@ public static class Program
         il2.EmitWriteLine("THIS ISN'T REAL!");
         il2.Emit(OpCodes.Ret);
         il2.EndScope();
-        program.CreateType();
+        program.CreateType();*/
         //asm.Save(asmName+".dll");
+        
         MetadataBuilder metadataBuilder = asm.GenerateMetadata(out BlobBuilder ilStream, out BlobBuilder fieldData);
         
         ManagedPEBuilder peBuilder = new(
@@ -93,7 +178,7 @@ public static class Program
             metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
             ilStream: ilStream,
             mappedFieldData: fieldData,
-            entryPoint: MetadataTokens.MethodDefinitionHandle(main.MetadataToken));
+            entryPoint: entryPoint==null? default : MetadataTokens.MethodDefinitionHandle(entryPoint.MetadataToken));
 
         BlobBuilder peBlob = new();
         peBuilder.Serialize(peBlob);
@@ -224,9 +309,10 @@ public static class Program
         public EnumStructureElement<Accessibility> MyAccessibility { get; }
     }
 
-    public enum MemberModifiers
+    public enum MethodModifiers
     {
         _ = 0,
+        @entry,
         @static,
         @override,
         @virtual,
@@ -234,9 +320,9 @@ public static class Program
         @abstract,
     }
 
-    public interface IHaveMemberModifiers
+    public interface IHaveModifiers<T> where T : struct, Enum
     {
-        public StructureElementArray<EnumStructureElement<MemberModifiers>> MyMemberModifiers { get; }
+        public ModifiersList<T> MyModifiers { get; }
     }
 
     public enum ClassModifiers
@@ -287,6 +373,24 @@ public static class Program
 
     public class IdentifierStructure : StructureElementList<SingleIdentifierStructure>
     {
+        public SingleIdentifierStructure this[Index index]
+        {
+            get
+            {
+                return ElementList[index];
+            }
+        }
+        public IdentifierStructure this[Range index]
+        {
+            get
+            {
+                var identifierStructure = new IdentifierStructure();
+                identifierStructure.Position = this.Position;
+                identifierStructure.ElementList = ElementList[index];
+                return identifierStructure;
+            }
+        }
+        
         public override char Separator => '.';
 
         public string FullIdentifier
@@ -420,24 +524,28 @@ public static class Program
         public SingleIdentifierStructure MyIdentifier { get; } = new();
         public TypeReferenceStructure MyTypeReference { get; } = new();
     }
-    public abstract class MemberStructure : StructureElement, IHaveAccessibility, IHaveMemberModifiers,
-        IHaveTypeReference,IHaveIdentifier
+
+    public class ModifiersList<T> : StructureElementArray<EnumStructureElement<T>> where T : struct, Enum
+    {
+    }
+    public abstract class MemberStructure<T>  : StructureElement, IHaveAccessibility, IHaveModifiers<T>,
+        IHaveTypeReference,IHaveIdentifier where T : struct, Enum
     {
         public EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
-        public StructureElementArray<EnumStructureElement<MemberModifiers>> MyMemberModifiers { get; } = new();
+        public ModifiersList<T> MyModifiers { get; } = new();
         public TypeReferenceStructure MyTypeReference { get; } = new();
         public SingleIdentifierStructure MyIdentifier { get; } = new();
 
         public override string ToString()
         {
-            return $"{MyAccessibility} {MyMemberModifiers} {MyTypeReference} {MyIdentifier}";
+            return $"{MyAccessibility} {MyModifiers} {MyTypeReference} {MyIdentifier}";
         }
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             if (!MyAccessibility.ParseElement(reader)) MyAccessibility.Value = Accessibility.@private;
             reader.SkipAllWhiteSpace();
-            MyMemberModifiers.ParseElement(reader);
+            MyModifiers.ParseElement(reader);
             reader.SkipAllWhiteSpace();
             if (!MyTypeReference.ParseElement(reader)) return false;
             reader.SkipAllWhiteSpace();
@@ -513,7 +621,7 @@ public static class Program
                     StringInterpretation += reader.Read();
                 }
                 if(reader.PeekString("\\\"", true))
-                  StringInterpretation += "\\\"";
+                  StringInterpretation += "\"";
                 goto again;
             }
             else return false;
@@ -578,7 +686,7 @@ public static class Program
         public override char Separator => ';';
     }
 
-    public class FuncStructure : MemberStructure
+    public class FuncStructure : MemberStructure<MethodModifiers>
     {
         public override string ToString()
         {
@@ -645,7 +753,12 @@ public static class Program
         }
     }
 
-    public class FieldStructure : MemberStructure
+    public enum FieldModifiers
+    {
+        _=0,
+        @static,
+    }
+    public class FieldStructure : MemberStructure<FieldModifiers>
     {
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -997,6 +1110,7 @@ public static class IDefineStructure
         {
             while (true)
             {
+                reader.SkipAllWhiteSpace();
                 var structureElement = new T();
                 if (structureElement.ParseElement(reader)) ElementList.Add(structureElement);
                 
