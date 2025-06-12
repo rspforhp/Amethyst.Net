@@ -13,17 +13,85 @@ using AsmResolver.DotNet.Bundles;
 using HarmonyLib;
 
 namespace Amethyst;
+
 public static class Extensions
 {
-    public static bool TryGetEnum<T>(this string text,out T en) where T : struct, Enum
+    public static bool TryGetEnum<T>(this string text, out T en) where T : struct, Enum
     {
         return Enum.TryParse<T>(text, out en);
     }
 
     public static readonly List<char> AllowedCharsInIdentifiersBesidesLetterAndDigits = new()
     {
-        '@','_'
+        '@', '_'
     };
+
+    public static bool CompileElement(this ICompileable toCompile, Compiler c)
+    {
+        return toCompile.HiddenCompileElement(c);
+    }
+
+
+    private static bool HandleCompileElement<T>(T element, Compiler c) where T : ICompileable
+    {
+        if (element.CompileElement(c))
+            return true;
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2, T3, T4, T5>(this StructureElementControl<T1, T2, T3, T4, T5> control,
+        Compiler c)
+        where T1 : StructureElement, ICompileable, new()
+        where T2 : StructureElement, ICompileable, new()
+        where T3 : StructureElement, ICompileable, new()
+        where T4 : StructureElement, ICompileable, new()
+        where T5 : StructureElement, ICompileable, new()
+    {
+        if (control.Element is ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2, T3, T4>(this StructureElementControl<T1, T2, T3, T4> control, Compiler c)
+        where T1 : StructureElement, ICompileable, new()
+        where T2 : StructureElement, ICompileable, new()
+        where T3 : StructureElement, ICompileable, new()
+        where T4 : StructureElement, ICompileable, new()
+    {
+        if (control.Element is ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2, T3>(this StructureElementControl<T1, T2, T3> control, Compiler c)
+        where T1 : StructureElement, ICompileable, new()
+        where T2 : StructureElement, ICompileable, new()
+        where T3 : StructureElement, ICompileable, new()
+    {
+        if (control.Element is ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2>(this StructureElementControl<T1, T2> control, Compiler c)
+        where T1 : StructureElement, ICompileable, new() where T2 : StructureElement, ICompileable, new()
+    {
+        if (control.Element is ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
 
     public static bool IsValidIdentifier(this string text)
     {
@@ -31,18 +99,15 @@ public static class Extensions
         if (char.IsDigit(text[0])) return false;
         var res = !text.Any(c =>
             !char.IsLetterOrDigit(c) && !AllowedCharsInIdentifiersBesidesLetterAndDigits.Contains(c));
-        
+
         return res;
     }
-
-  
 }
-
 
 public static class Program
 {
-    
     private static bool SomeBool;
+
     private static void ILPreview()
     {
         if (SomeBool)
@@ -54,6 +119,7 @@ public static class Program
             Console.WriteLine(2);
         }
     }
+
     public static void Main(string[] args)
     {
         Console.WriteLine("Compiling shard!");
@@ -61,237 +127,237 @@ public static class Program
         var sh = new ShardStructure();
         var f = sh.ParseElement(FileReader);
         if (!f) throw new Exception("???");
-        string asmName = "AssemblyShard";
-        var cor = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "System.Private.CoreLib.dll");
-        PersistedAssemblyBuilder asm = new PersistedAssemblyBuilder(new AssemblyName(asmName), typeof(object).Assembly);
-        var mainModule = asm.DefineDynamicModule(asmName);
+        //string asmName = "AssemblyShard";
+        var ilc = new ILCompiler("AssemblyShard");
 
+        sh.CompileElement(ilc);
+
+        ilc.CompileToFile();
+
+
+        //OLD
+        /*
         MethodInfo entryPoint = null;
         foreach (var classStructure in sh.ElementList)
         {
             //TODO: abstract away the IL gen
             TypeAttributes typeAtr = TypeAttributes.Class;
-            if (classStructure.MyClassModifiers.ElementList.Any(a => a.Value == ClassModifiers.@static))
-            {
-                typeAtr |= TypeAttributes.Sealed | TypeAttributes.Abstract;
-            }
-                
 
-            switch (classStructure.MyAccessibility.Value)
-            {
-                case Accessibility.@private:
-                    typeAtr |= TypeAttributes.NestedPrivate;
-                    break;
-                case Accessibility.@public:
-                    typeAtr |= TypeAttributes.Public;
-                    break;
-                case Accessibility.@internal:
-                    typeAtr |= TypeAttributes.NestedPrivate;
-                    break;
-                case Accessibility.@protected:
-                    typeAtr |= TypeAttributes.NestedPrivate;
-                    break;
-                case null:
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-           
             var typeBuilder = mainModule.DefineType(classStructure.MyIdentifier.Identifier, typeAtr);
-           
+
             foreach (var member in classStructure.Members.ElementList)
             {
                 switch (member.Element)
                 {
                     case FuncStructure func:
-                       var m=typeBuilder.DefineMethod(func.MyIdentifier.Identifier,
+                        var m = typeBuilder.DefineMethod(func.MyIdentifier.Identifier,
                             MethodAttributes.Static | MethodAttributes.Public, CallingConventions.Standard,
                             Type.GetType(func.MyTypeReference.FullIdentifier),
                             func.Parameters.ElementList.Select(a => a.MyTypeReference.FullIdentifier)
                                 .Select(Type.GetType).ToArray());
-                       var il = m.GetILGenerator();
-                       il.BeginScope();
+                        var il = m.GetILGenerator();
+                        il.BeginScope();
 
-                       foreach (var expr in func.FuncBody.ElementList)
-                       {
-                           switch (expr.Element)
-                           {
-                               case FunctionInvokationExpressionStructure invok:
-                                   var methodName = invok.MethodIdentifier[^1];
-                                   var typeName = invok.MethodIdentifier[..^1];
-                                   if (string.IsNullOrEmpty(typeName.FullIdentifier))
-                                   {
-                                       //TODO: either inside the this type, or was got via using's im yet to implement
-                                       Debugger.Break();
-                                   }
+                        foreach (var expr in func.FuncBody.ElementList)
+                        {
+                            switch (expr.Element)
+                            {
+                                case FunctionInvokationExpressionStructure invok:
 
-                                   //TODO: get method with params
-                                   List<Type> paramTypes = new();
-                                   foreach (var para in invok.Parameters.ElementList)
-                                   {
-                                       switch (para.Element)
-                                       {
-                                           case LiteralStructure lit:
+                                    Debugger.Break();
+                                    break;
+                            }
+                        }
 
-                                               switch (lit.Element)
-                                               {
-                                                   case StringLiteralStructure str:
-                                                       paramTypes.Add(typeof(string));
-                                                       break;
-                                                   case NumberLiteralStructure num:
-                                                       Debugger.Break();
-                                                       break;
-                                               }
-                                               break;
-                                           case IdentifierStructure id:
-                                               Debugger.Break();
-                                               break;
-                                       }                                       
-                                   }
-                                   
-                                   Type theType = AccessTools.TypeByName(typeName.FullIdentifier);
-                                   if (theType == null) throw new TypeLoadException("Type not found!");
-                                   
-                                   var gotMethod = AccessTools.Method(theType,methodName.Identifier,paramTypes.ToArray());
-                                   
-                                   foreach (var para in invok.Parameters.ElementList)
-                                   {
-                                       switch (para.Element)
-                                       {
-                                           case LiteralStructure lit:
 
-                                               switch (lit.Element)
-                                               {
-                                                   case StringLiteralStructure str:
-                                                       il.Emit(OpCodes.Ldstr, str.StringInterpretation);
-                                                       break;
-                                                   case NumberLiteralStructure num:
-                                                       Debugger.Break();
-                                                       break;
-                                               }
-                                               break;
-                                           case IdentifierStructure id:
-                                               Debugger.Break();
-                                               break;
-                                       }                                       
-                                   }
-                                   
-                                   il.EmitCall(OpCodes.Call, gotMethod,null);
-                                   
-                                   Debugger.Break();
-                                   break;
-                           }
-                           
-                           
-                           
-                       }
-                       
-                       
-                       il.Emit(OpCodes.Ret);
-                       il.EndScope();
+                        il.Emit(OpCodes.Ret);
+                        il.EndScope();
 
-                       if (func.MyModifiers.ElementList.Any(a => a.Value == MethodModifiers.entry))
-                       {
-                           if (entryPoint != null) throw new Exception("Multiple entry points are not supported!");
-                           entryPoint = m;
-                       }
-                       break;
+                        if (func.MyModifiers.ElementList.Any(a => a.Value == MethodModifiers.entry))
+                        {
+                            if (entryPoint != null) throw new Exception("Multiple entry points are not supported!");
+                            entryPoint = m;
+                        }
+
+                        break;
                     case FieldStructure field:
                         break;
                 }
             }
 
             typeBuilder.CreateType();
-        }
-        
-        /*
-        var program = mainModule.DefineType("Program", TypeAttributes.Class | TypeAttributes.Public);
-        var main=program.DefineMethod("Main", MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.HideBySig);
-        ILGenerator il2 = main.GetILGenerator();
-        il2.BeginScope();
-        il2.EmitWriteLine("THIS ISN'T REAL!");
-        il2.Emit(OpCodes.Ret);
-        il2.EndScope();
-        program.CreateType();*/
-        //asm.Save(asmName+".dll");
-        
-        MetadataBuilder metadataBuilder = asm.GenerateMetadata(out BlobBuilder ilStream, out BlobBuilder fieldData);
-        
-        ManagedPEBuilder peBuilder = new(
-            header: PEHeaderBuilder.CreateExecutableHeader(),
-            metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
-            ilStream: ilStream,
-            mappedFieldData: fieldData,
-            entryPoint: entryPoint==null? default : MetadataTokens.MethodDefinitionHandle(entryPoint.MetadataToken));
-
-        BlobBuilder peBlob = new();
-        peBuilder.Serialize(peBlob);
-        // Create the executable:
-        using (FileStream fileStream = new(asmName + ".dll", FileMode.Create, FileAccess.Write))
-        {        peBlob.WriteContentTo(fileStream);
-
-        }
-
-
-        BundleManifest manifest = new BundleManifest(6);
-        manifest.Files.Add(new BundleFile($"{asmName}.dll", BundleFileType.Assembly, contents:System.IO.File.ReadAllBytes($"{asmName}.dll")));
-        manifest.WriteUsingTemplate(
-            $"{asmName}.exe",
-            BundlerParameters.FromTemplate(
-                appHostTemplatePath: @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Host.win-x64\10.0.0-preview.4.25258.110\runtimes\win-x64\native\apphost.exe",
-                appBinaryPath: $"{asmName}.dll"
-                //imagePathToCopyHeadersFrom: @"C:\Path\To\Original\HelloWorld.exe"
-                ));    
-        
-        File.WriteAllText($"{asmName}.runtimeconfig.json",
-"""
-{
-  "runtimeOptions": {
-    "tfm": "net10.0",
-    "framework": {
-      "name": "Microsoft.NETCore.App",
-      "version": "10.0.0-preview.4.25258.110"
-    },
-    "configProperties": {
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
+        }*/
     }
-  }
-}
-""");
-        
-        File.WriteAllText($"{asmName}.deps.json",
-            $$"""
+
+    public class ILCompiler : Compiler
+    {
+        public MethodInfo EntryPoint;
+        public string AsmName;
+
+        public PersistedAssemblyBuilder AsmBuilder;
+        public ModuleBuilder MainModule;
+        public TypeBuilder TypeBuilder;
+        public MethodBuilder MethodBuilder;
+        public ILGenerator IL;
+
+        public Type GetType(String typename)
+        {
+            var a = AccessTools.TypeByName(typename);
+            var localType = AsmBuilder.GetType(typename, false);
+            if (localType is not null)
+                return localType;
+            return null;
+        }
+
+
+        public ILCompiler(string asmName)
+        {
+            AsmName = asmName;
+            AsmBuilder = new PersistedAssemblyBuilder(new AssemblyName(AsmName), typeof(object).Assembly);
+            MainModule = AsmBuilder.DefineDynamicModule(AsmName);
+        }
+
+        public override bool CompileToFile()
+        {
+            MetadataBuilder metadataBuilder =
+                AsmBuilder.GenerateMetadata(out BlobBuilder ilStream, out BlobBuilder fieldData);
+            ManagedPEBuilder peBuilder = new(
+                header: PEHeaderBuilder.CreateExecutableHeader(),
+                metadataRootBuilder: new MetadataRootBuilder(metadataBuilder),
+                ilStream: ilStream,
+                mappedFieldData: fieldData,
+                entryPoint: EntryPoint == null
+                    ? default
+                    : MetadataTokens.MethodDefinitionHandle(EntryPoint.MetadataToken));
+
+            BlobBuilder peBlob = new();
+            peBuilder.Serialize(peBlob);
+            // Create the executable:
+            using (FileStream fileStream = new(AsmName + ".dll", FileMode.Create, FileAccess.Write))
             {
-              "runtimeTarget": {
-                "name": ".NETCoreApp,Version=v10.0",
-                "signature": ""
-              },
-              "compilationOptions": {},
-              "targets": {
-                ".NETCoreApp,Version=v10.0": {
-                  "{{asmName}}/1.0.0": {
-                    "runtime": {
-                      "{{asmName}}.dll": {}
+                peBlob.WriteContentTo(fileStream);
+            }
+
+
+            BundleManifest manifest = new BundleManifest(6);
+            manifest.Files.Add(new BundleFile($"{AsmName}.dll", BundleFileType.Assembly,
+                contents: System.IO.File.ReadAllBytes($"{AsmName}.dll")));
+            manifest.WriteUsingTemplate(
+                $"{AsmName}.exe",
+                BundlerParameters.FromTemplate(
+                    appHostTemplatePath:
+                    @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Host.win-x64\10.0.0-preview.4.25258.110\runtimes\win-x64\native\apphost.exe",
+                    appBinaryPath: $"{AsmName}.dll"
+                    //imagePathToCopyHeadersFrom: @"C:\Path\To\Original\HelloWorld.exe"
+                ));
+
+            File.WriteAllText($"{AsmName}.runtimeconfig.json",
+                """
+                {
+                  "runtimeOptions": {
+                    "tfm": "net10.0",
+                    "framework": {
+                      "name": "Microsoft.NETCore.App",
+                      "version": "10.0.0-preview.4.25258.110"
+                    },
+                    "configProperties": {
+                      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
                     }
                   }
                 }
-              },
-              "libraries": {
-                "{{asmName}}/1.0.0": {
-                  "type": "project",
-                  "serviceable": false,
-                  "sha512": ""
-                }
-              }
-            }
-            """);
-        //asm.Save(asmName+".exe");
+                """);
 
-        //Debugger.Break();
-        
+            File.WriteAllText($"{AsmName}.deps.json",
+                $$"""
+                  {
+                    "runtimeTarget": {
+                      "name": ".NETCoreApp,Version=v10.0",
+                      "signature": ""
+                    },
+                    "compilationOptions": {},
+                    "targets": {
+                      ".NETCoreApp,Version=v10.0": {
+                        "{{AsmName}}/1.0.0": {
+                          "runtime": {
+                            "{{AsmName}}.dll": {}
+                          }
+                        }
+                      }
+                    },
+                    "libraries": {
+                      "{{AsmName}}/1.0.0": {
+                        "type": "project",
+                        "serviceable": false,
+                        "sha512": ""
+                      }
+                    }
+                  }
+                  """);
+            return true;
+        }
     }
 
-    public class ClassStructure : StructureElement, IHaveAccessibility,IHaveClassModifiers,IHaveIdentifier
+    public class ClassStructure : StructureElement, IHaveAccessibility, IHaveClassModifiers, IHaveIdentifier,
+        ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+
+            TypeAttributes atr = TypeAttributes.Class;
+            foreach (var e in MyClassModifiers.ElementList.Select(a => a.Value))
+            {
+                switch (e)
+                {
+                    case ClassModifiers.@static:
+                        atr |= TypeAttributes.Sealed | TypeAttributes.Abstract;
+                        break;
+                    case ClassModifiers.@abstract:
+                        atr |= TypeAttributes.Abstract;
+                        break;
+                    case ClassModifiers.@sealed:
+                        atr |= TypeAttributes.Sealed;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            switch (MyAccessibility.Value)
+            {
+                case Accessibility.@private:
+                    atr |= TypeAttributes.NestedPrivate;
+                    break;
+                case Accessibility.@public:
+                    atr |= TypeAttributes.Public;
+                    break;
+                case Accessibility.@internal:
+                    atr |= TypeAttributes.NestedPrivate;
+                    break;
+                case Accessibility.@protected:
+                    atr |= TypeAttributes.NestedPrivate;
+                    break;
+                case null:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            //TODO: parent
+            ilc.TypeBuilder = ilc.MainModule.DefineType(this.MyIdentifier.Identifier, atr, typeof(Object));
+
+            foreach (var member in this.Members.ElementList)
+            {
+                member.CompileElement(ilc);
+            }
+
+
+            ilc.TypeBuilder = null;
+            return true;
+        }
+
+
         public override string ToString()
         {
             return $"{MyAccessibility} {MyClassModifiers} class {MyIdentifier} {{{Members}}}";
@@ -309,8 +375,8 @@ public static class Program
             if (!reader.PeekString("class", true)) return false;
             reader.SkipAllWhiteSpace();
             if (!MyIdentifier.ParseElement(reader)) return false;
-           
-            
+
+
             reader.SkipAllWhiteSpace();
             if (reader.Peek() == '{')
             {
@@ -318,29 +384,39 @@ public static class Program
                 reader.SkipAllWhiteSpace();
                 Members.ParseElement(reader);
                 reader.SkipAllWhiteSpace();
-                if (reader.Peek()=='}')
+                if (reader.Peek() == '}')
                 {
-                    reader.Advance();reader.SkipAllWhiteSpace();
+                    reader.Advance();
+                    reader.SkipAllWhiteSpace();
                     return true;
                 }
             }
 
             return false;
-
-
-    }
+        }
 
         public EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
-        public StructureElementArray<EnumStructureElement<ClassModifiers>> MyClassModifiers { get; }= new();
-        public SingleIdentifierStructure MyIdentifier { get; }= new();
+        public StructureElementArray<EnumStructureElement<ClassModifiers>> MyClassModifiers { get; } = new();
+        public SingleIdentifierStructure MyIdentifier { get; } = new();
     }
-    public class ShardStructure : StructureElementArray<ClassStructure>
+
+    public class ShardStructure : StructureElementArray<ClassStructure>, ICompileable
     {
-       
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            foreach (var classStructure in this.ElementList)
+            {
+                classStructure.CompileElement(c);
+            }
+
+            return true;
+        }
     }
 
     public enum Accessibility
     {
+        _,
         @private,
         @public,
         @internal,
@@ -373,12 +449,14 @@ public static class Program
         _ = 0,
         @static,
         @abstract,
+        @sealed,
     }
 
     public interface IHaveClassModifiers
     {
         public StructureElementArray<EnumStructureElement<ClassModifiers>> MyClassModifiers { get; }
     }
+
     public enum TypeKeywords
     {
         _ = 0,
@@ -418,11 +496,9 @@ public static class Program
     {
         public SingleIdentifierStructure this[Index index]
         {
-            get
-            {
-                return ElementList[index];
-            }
+            get { return ElementList[index]; }
         }
+
         public IdentifierStructure this[Range index]
         {
             get
@@ -433,19 +509,19 @@ public static class Program
                 return identifierStructure;
             }
         }
-        
+
         public override char Separator => '.';
 
         public string FullIdentifier
         {
-            get => string.Join('.', this.ElementList.Select(a=>a.Identifier));
+            get => string.Join('.', this.ElementList.Select(a => a.Identifier));
             set
             {
                 ElementList.Clear();
                 var split = value.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (var s in split)
                 {
-                    ElementList.Add(new SingleIdentifierStructure(){Identifier = s,Position =this.Position });
+                    ElementList.Add(new SingleIdentifierStructure() { Identifier = s, Position = this.Position });
                 }
             }
         }
@@ -470,6 +546,7 @@ public static class Program
                     reader.Advance(w);
                     return true;
                 }
+
                 //TODO: allow weird identifiers, maybe make smth for that idk?
                 return false;
             }
@@ -478,7 +555,6 @@ public static class Program
 
     public class TypeReferenceStructure : IdentifierStructure
     {
-       
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             var b = base.DoParseElement(reader);
@@ -545,6 +621,7 @@ public static class Program
                         throw new ArgumentOutOfRangeException();
                 }
             }
+
             return b;
         }
     }
@@ -571,8 +648,9 @@ public static class Program
     public class ModifiersList<T> : StructureElementArray<EnumStructureElement<T>> where T : struct, Enum
     {
     }
-    public abstract class MemberStructure<T>  : StructureElement, IHaveAccessibility, IHaveModifiers<T>,
-        IHaveTypeReference,IHaveIdentifier where T : struct, Enum
+
+    public abstract class MemberStructure<T> : StructureElement, IHaveAccessibility, IHaveModifiers<T>,
+        IHaveTypeReference, IHaveIdentifier where T : struct, Enum
     {
         public EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
         public ModifiersList<T> MyModifiers { get; } = new();
@@ -594,13 +672,15 @@ public static class Program
             reader.SkipAllWhiteSpace();
             if (!MyIdentifier.ParseElement(reader)) return false;
             return true;
-        }   
-
+        }
     }
 
-    public abstract class ExpressionStructure : StructureElement
+    public abstract class ExpressionStructure : StructureElement, ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
         //? idk what i could put here besides just making it empty yet
+        public abstract bool DoCompileElement(Compiler c);
     }
 
     public abstract class AbstractLiteralStructure : StructureElement
@@ -620,6 +700,7 @@ public static class Program
         public bool IsInteger;
         public System.Decimal BiggestFloat;
         public bool IsFloat;
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             var word = reader.PeekWord;
@@ -629,12 +710,14 @@ public static class Program
                 IsInteger = true;
                 return true;
             }
+
             if (Decimal.TryParse(word, out BiggestFloat))
             {
                 reader.Advance(word);
                 IsFloat = true;
                 return true;
             }
+
             return false;
         }
     }
@@ -646,7 +729,8 @@ public static class Program
             return $"\"{StringInterpretation}\"";
         }
 
-        public System.String StringInterpretation="";
+        public System.String StringInterpretation = "";
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             if (reader.Peek() == '\"')
@@ -658,26 +742,30 @@ public static class Program
                     if (reader.Peek() == '\"')
                     {
                         reader.Advance();
-                       //Debugger.Break();
+                        //Debugger.Break();
                         return true;
                     }
+
                     StringInterpretation += reader.Read();
                 }
-                if(reader.PeekString("\\\"", true))
-                  StringInterpretation += "\"";
+
+                if (reader.PeekString("\\\"", true))
+                    StringInterpretation += "\"";
                 goto again;
             }
             else return false;
         }
     }
+
     public class BooleanLiteralStructure : AbstractLiteralStructure
     {
         public override string ToString()
         {
-             return Value.ToString();
+            return Value.ToString();
         }
 
         public bool? Value;
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             var word = reader.PeekWord;
@@ -687,28 +775,107 @@ public static class Program
                 reader.Advance(word);
                 return true;
             }
-            
+
             return false;
         }
     }
-    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure,NumberLiteralStructure,StringLiteralStructure>
+
+    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure, NumberLiteralStructure,
+        StringLiteralStructure>
     {
-        
     }
-    public class InvokationParameterStructure : StructureElementControl<FunctionInvokationExpressionStructure,IdentifierStructure, LiteralStructure>
+
+    public class InvokationParameterStructure : StructureElementControl<FunctionInvokationExpressionStructure,
+        IdentifierStructure, LiteralStructure>
     {
-      
     }
+
     public class FunctionInvokationExpressionStructure : ExpressionStructure
     {
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            var il = ilc.IL;
+
+            //TODO: left off here!
+
+            var methodName = this.MethodIdentifier[^1];
+            var typeName = this.MethodIdentifier[..^1];
+            if (string.IsNullOrEmpty(typeName.FullIdentifier))
+            {
+                //TODO: either inside the this type, or was got via using's im yet to implement
+                Debugger.Break();
+            }
+
+            //TODO: get method with params
+            List<Type> paramTypes = new();
+            foreach (var para in this.Parameters.ElementList)
+            {
+                switch (para.Element)
+                {
+                    case LiteralStructure lit:
+
+                        switch (lit.Element)
+                        {
+                            case StringLiteralStructure str:
+                                paramTypes.Add(typeof(string));
+                                break;
+                            case NumberLiteralStructure num:
+                                Debugger.Break();
+                                break;
+                        }
+
+                        break;
+                    case IdentifierStructure id:
+                        Debugger.Break();
+                        break;
+                }
+            }
+
+            Type theType = AccessTools.TypeByName(typeName.FullIdentifier);
+            if (theType == null) throw new TypeLoadException("Type not found!");
+
+            var gotMethod = AccessTools.Method(theType, methodName.Identifier,
+                paramTypes.ToArray());
+
+            foreach (var para in this.Parameters.ElementList)
+            {
+                switch (para.Element)
+                {
+                    case LiteralStructure lit:
+
+                        switch (lit.Element)
+                        {
+                            case StringLiteralStructure str:
+                                il.Emit(OpCodes.Ldstr, str.StringInterpretation);
+                                break;
+                            case NumberLiteralStructure num:
+                                Debugger.Break();
+                                break;
+                        }
+
+                        break;
+                    case IdentifierStructure id:
+                        Debugger.Break();
+                        break;
+                }
+            }
+
+            il.EmitCall(OpCodes.Call, gotMethod, null);
+
+
+            return true;
+        }
+
         public override string ToString()
         {
             return $"{MethodIdentifier}({Parameters})";
         }
 
         public StructureElementList<InvokationParameterStructure> Parameters = new();
-        
-        public IdentifierStructure MethodIdentifier=new();
+
+        public IdentifierStructure MethodIdentifier = new();
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             reader.SkipAllWhiteSpace();
@@ -728,10 +895,11 @@ public static class Program
                     ///???
                     Debugger.Break();
                     return false;
-                }else reader.Advance();
+                }
+                else reader.Advance();
             }
             else reader.Advance();
-            
+
             reader.SkipAllWhiteSpace();
 
             /*
@@ -746,8 +914,14 @@ public static class Program
         }
     }
 
-    public class IfExpression: ExpressionStructure
+    public class IfExpression : ExpressionStructure
     {
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            return true;
+        }
+
         public override string ToString()
         {
             return $"if({IfInsides}){{{FuncBody}}}";
@@ -755,6 +929,7 @@ public static class Program
 
         public InvokationParameterStructure IfInsides = new();
         public FuncBodyStructure FuncBody = new();
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             reader.SkipAllWhiteSpace();
@@ -777,7 +952,8 @@ public static class Program
                     Debugger.Break();
                     return false;
                 }
-            }else reader.Advance();
+            }
+            else reader.Advance();
 
             reader.SkipAllWhiteSpace();
             FuncBody.ParseElement(reader);
@@ -787,22 +963,40 @@ public static class Program
             return true;
         }
     }
-    public class FuncBodyStructure : StructureElementList<StructureElementControl<FuncBodyStructure,IfExpression,FunctionInvokationExpressionStructure>>
+
+    public class FuncBodyStructure : StructureElementList<
+        StructureElementControl<FuncBodyStructure, IfExpression, FunctionInvokationExpressionStructure>>, ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            ilc.IL.BeginScope();
+
+            foreach (var expr in this.ElementList)
+            {
+                expr.CompileElement(ilc);
+            }
+
+            ilc.IL.EndScope();
+            return true;
+        }
+
         public override char Separator => ';';
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             reader.SkipAllWhiteSpace();
-            if(reader.Peek()=='{')
+            if (reader.Peek() == '{')
             {
                 reader.Advance();
                 //Do method body
                 if (!base.DoParseElement(reader))
                 {
                     //empty body
-                    
                 }
+
                 reader.SkipAllWhiteSpace();
                 if (reader.Peek() == '}')
                 {
@@ -816,13 +1010,94 @@ public static class Program
                 //TODO: single line
                 return false;
             }
+
             Debugger.Break();
             return false;
         }
     }
 
-    public class FuncStructure : MemberStructure<MethodModifiers>
+    public class FuncStructure : MemberStructure<MethodModifiers>, ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            MethodAttributes atr = MethodAttributes.PrivateScope;
+            switch (MyAccessibility.Value)
+            {
+                case Accessibility.@private:
+                    atr |= MethodAttributes.Private;
+                    break;
+                case Accessibility.@public:
+                    atr |= MethodAttributes.Public;
+                    break;
+                case Accessibility.@internal:
+                    atr |= MethodAttributes.Private;
+                    break;
+                case Accessibility.@protected:
+                    atr |= MethodAttributes.Private;
+                    break;
+                case null:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            foreach (var v in MyModifiers.ElementList.Select(a => a.Value))
+            {
+                switch (v)
+                {
+                    case MethodModifiers.entry:
+                        if (ilc.EntryPoint == null)
+                        {
+                            ilc.EntryPoint = ilc.MethodBuilder;
+                        }
+                        else
+                        {
+                            //TODO: this is an error.
+                            return false;
+                        }
+
+                        break;
+                    case MethodModifiers.@static:
+                        atr |= MethodAttributes.Static;
+                        break;
+                    case MethodModifiers.@override:
+                        atr |= MethodAttributes.ReuseSlot;
+                        break;
+                    case MethodModifiers.@virtual:
+                        atr |= MethodAttributes.Virtual;
+                        break;
+                    case MethodModifiers.@new:
+                        atr |= MethodAttributes.NewSlot;
+                        break;
+                    case MethodModifiers.@abstract:
+                        atr |= MethodAttributes.Abstract;
+                        break;
+                    case null:
+                    case MethodModifiers._:
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            ilc.MethodBuilder = ilc.TypeBuilder.DefineMethod(this.MyIdentifier.Identifier, atr,
+                ilc.GetType(this.MyTypeReference.FullIdentifier),
+                this.Parameters.ElementList.Select(a => ilc.GetType(a.MyTypeReference.FullIdentifier)).ToArray()
+            );
+            for (int i = 0; i < Parameters.ElementList.Count; i++)
+            {
+                var p = Parameters.ElementList[i];
+                ilc.MethodBuilder.DefineParameter(i, ParameterAttributes.None, p.MyIdentifier.Identifier);
+            }
+
+            ilc.IL = ilc.MethodBuilder.GetILGenerator();
+            this.FuncBody.CompileElement(ilc);
+            ilc.IL.Emit(OpCodes.Ret);
+
+            return true;
+        }
+
         public override string ToString()
         {
             return $"{base.ToString()}({Parameters}){{{FuncBody.ToString()}}}";
@@ -830,6 +1105,7 @@ public static class Program
 
         public StructureElementList<FuncParameterStructure> Parameters = new();
         public FuncBodyStructure FuncBody = new();
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             base.DoParseElement(reader);
@@ -848,10 +1124,11 @@ public static class Program
                     ///???
                     Debugger.Break();
                     return false;
-                }else reader.Advance();
+                }
+                else reader.Advance();
             }
             else reader.Advance();
-            
+
             reader.SkipAllWhiteSpace();
 
             if (reader.Peek() == ';')
@@ -863,9 +1140,8 @@ public static class Program
             else
             {
                 if (FuncBody.ParseElement(reader)) return true;
-                
             }
-            
+
             //Debugger.Break();
             return false;
         }
@@ -873,11 +1149,23 @@ public static class Program
 
     public enum FieldModifiers
     {
-        _=0,
+        _ = 0,
         @static,
     }
-    public class FieldStructure : MemberStructure<FieldModifiers>
+
+    public class FieldStructure : MemberStructure<FieldModifiers>, ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+
+            //TODO:
+            return false;
+        }
+
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             base.DoParseElement(reader);
@@ -888,6 +1176,7 @@ public static class Program
                 reader.SkipAllWhiteSpace();
                 return true;
             }
+
             return false;
         }
 
@@ -902,29 +1191,32 @@ public class SimpleFileReader
 {
     public string FileContents = string.Empty;
     private uint _pos;
+
     public uint Position
     {
-        get
-        {
-            return _pos;
-        }
+        get { return _pos; }
         set
         {
             //Console.WriteLine(System.Environment.StackTrace);
             _pos = value;
         }
     }
+
     public char PeekChar => Peek();
+
     //[] for type's and <> for generics, idk for other stuff lol
-    public readonly List<char> WordEndingChars = new() { ';','(',')','{','}',',','+','/',':','-','=','*','.'};
-    public string PeekWord => Position>=this.FileContents.Length? string.Empty :  PeekUntil(c => char.IsWhiteSpace(c) || WordEndingChars.Contains(c) );
+    public readonly List<char> WordEndingChars = new()
+        { ';', '(', ')', '{', '}', ',', '+', '/', ':', '-', '=', '*', '.' };
+
+    public string PeekWord => Position >= this.FileContents.Length
+        ? string.Empty
+        : PeekUntil(c => char.IsWhiteSpace(c) || WordEndingChars.Contains(c));
 
     public override string ToString()
     {
         var word = PeekWord;
         return PeekWord;
     }
-
 
 
     public char Peek()
@@ -942,9 +1234,8 @@ public class SimpleFileReader
     {
         var posFirst = Position;
         Position += am;
-        if (am==6 && posFirst==0 && Position==5)
+        if (am == 6 && posFirst == 0 && Position == 5)
             throw new Exception("Math issue");
-
     }
 
     public void Retreat(uint am = 1)
@@ -1004,7 +1295,7 @@ public class SimpleFileReader
             c = Peek();
         }
 
-        Retreat((uint)builder.Length );
+        Retreat((uint)builder.Length);
         return builder.ToString();
     }
 
@@ -1014,8 +1305,8 @@ public class SimpleFileReader
         Advance((uint)peek.Length);
         return peek;
     }
-    
-    
+
+
     public string PeekUntil(Func<char, bool> rule)
     {
         StringBuilder builder = new StringBuilder();
@@ -1054,8 +1345,6 @@ public class SimpleFileReader
 
 public static class IDefineStructure
 {
-
-
     public class EnumStructureElement<T> : StructureElement where T : struct, Enum
     {
         public override string ToString()
@@ -1081,15 +1370,34 @@ public static class IDefineStructure
     }
 
 
+    public abstract class Compiler
+    {
+        public abstract bool CompileToFile();
+    }
+
+    public interface ICompileable
+    {
+        public virtual List<Type> SupportedCompilers => new();
+
+        public sealed bool HiddenCompileElement(Compiler c)
+        {
+            if (!SupportedCompilers.Contains(c.GetType())) return false;
+            return DoCompileElement(c);
+        }
+
+        protected abstract bool DoCompileElement(Compiler c);
+    }
+
     public abstract class StructureElement
     {
         public uint Position { get; set; }
         public uint Size { get; protected set; }
 
+
         public bool ParseElement(SimpleFileReader reader)
         {
             this.Position = reader.Position;
-            var b=DoParseElement(reader);
+            var b = DoParseElement(reader);
             if (b)
             {
                 Size = reader.Position - this.Position;
@@ -1107,6 +1415,7 @@ public static class IDefineStructure
     }
 
     //TODO: make more if i need to lol
+    //make more compile too if i do that
     public class StructureElementControl<T1, T2, T3, T4, T5> : StructureElementControl<T1, T2, T3, T4>
         where T1 : StructureElement, new()
         where T2 : StructureElement, new()
@@ -1114,7 +1423,7 @@ public static class IDefineStructure
         where T4 : StructureElement, new()
         where T5 : StructureElement, new()
     {
-        private T5 _T5 = new();
+        protected T5 _T5 = new();
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -1129,7 +1438,7 @@ public static class IDefineStructure
         where T3 : StructureElement, new()
         where T4 : StructureElement, new()
     {
-        private T4 _T4 = new();
+        protected T4 _T4 = new();
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -1141,7 +1450,7 @@ public static class IDefineStructure
     public class StructureElementControl<T1, T2, T3> : StructureElementControl<T1, T2>
         where T1 : StructureElement, new() where T2 : StructureElement, new() where T3 : StructureElement, new()
     {
-        private T3 _T3 = new();
+        protected T3 _T3 = new();
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -1149,6 +1458,7 @@ public static class IDefineStructure
             return HandleElement(ref _T3, reader);
         }
     }
+
 
     public class StructureElementControl<T1, T2> : StructureElement where T1 : StructureElement, new()
         where T2 : StructureElement, new()
@@ -1158,8 +1468,8 @@ public static class IDefineStructure
             return Element.ToString();
         }
 
-        private T1 _T1 = new();
-        private T2 _T2 = new();
+        protected T1 _T1 = new();
+        protected T2 _T2 = new();
         public StructureElement Element;
 
         protected bool HandleElement<T>(ref T element, SimpleFileReader reader) where T : StructureElement
@@ -1192,6 +1502,7 @@ public static class IDefineStructure
         }
 
         public virtual char Separator => ',';
+
         protected override bool DoParseElement(SimpleFileReader reader)
         {
             while (true)
@@ -1199,7 +1510,7 @@ public static class IDefineStructure
                 var structureElement = new T();
                 if (structureElement.ParseElement(reader)) ElementList.Add(structureElement);
                 else break;
-                
+
                 reader.SkipAllWhiteSpace();
                 if (reader.Peek() == Separator)
                 {
@@ -1208,10 +1519,9 @@ public static class IDefineStructure
                     continue;
                 }
                 else break;
-                
             }
 
-            return ElementList.Count>0;
+            return ElementList.Count > 0;
         }
     }
 
@@ -1231,11 +1541,11 @@ public static class IDefineStructure
                 reader.SkipAllWhiteSpace();
                 var structureElement = new T();
                 if (structureElement.ParseElement(reader)) ElementList.Add(structureElement);
-                
+
                 else break;
             }
 
-            return ElementList.Count>0;
+            return ElementList.Count > 0;
         }
     }
 }
