@@ -37,8 +37,23 @@ public static class Extensions
 
   
 }
+
+
 public static class Program
 {
+    
+    private static bool SomeBool;
+    private static void ILPreview()
+    {
+        if (SomeBool)
+        {
+            Console.WriteLine(1);
+        }
+        else
+        {
+            Console.WriteLine(2);
+        }
+    }
     public static void Main(string[] args)
     {
         Console.WriteLine("Compiling shard!");
@@ -54,7 +69,35 @@ public static class Program
         MethodInfo entryPoint = null;
         foreach (var classStructure in sh.ElementList)
         {
-            var typeBuilder = mainModule.DefineType(classStructure.MyIdentifier.Identifier, TypeAttributes.Class | TypeAttributes.Public);
+            //TODO: abstract away the IL gen
+            TypeAttributes typeAtr = TypeAttributes.Class;
+            if (classStructure.MyClassModifiers.ElementList.Any(a => a.Value == ClassModifiers.@static))
+            {
+                typeAtr |= TypeAttributes.Sealed | TypeAttributes.Abstract;
+            }
+                
+
+            switch (classStructure.MyAccessibility.Value)
+            {
+                case Accessibility.@private:
+                    typeAtr |= TypeAttributes.NestedPrivate;
+                    break;
+                case Accessibility.@public:
+                    typeAtr |= TypeAttributes.Public;
+                    break;
+                case Accessibility.@internal:
+                    typeAtr |= TypeAttributes.NestedPrivate;
+                    break;
+                case Accessibility.@protected:
+                    typeAtr |= TypeAttributes.NestedPrivate;
+                    break;
+                case null:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+           
+            var typeBuilder = mainModule.DefineType(classStructure.MyIdentifier.Identifier, typeAtr);
+           
             foreach (var member in classStructure.Members.ElementList)
             {
                 switch (member.Element)
@@ -627,11 +670,32 @@ public static class Program
             else return false;
         }
     }
-    public class LiteralStructure : StructureElementControl<NumberLiteralStructure,StringLiteralStructure>
+    public class BooleanLiteralStructure : AbstractLiteralStructure
+    {
+        public override string ToString()
+        {
+             return Value.ToString();
+        }
+
+        public bool? Value;
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            var word = reader.PeekWord;
+            if (bool.TryParse(word, out var b))
+            {
+                Value = b;
+                reader.Advance(word);
+                return true;
+            }
+            
+            return false;
+        }
+    }
+    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure,NumberLiteralStructure,StringLiteralStructure>
     {
         
     }
-    public class InvokationParameterStructure : StructureElementControl<IdentifierStructure, LiteralStructure>
+    public class InvokationParameterStructure : StructureElementControl<FunctionInvokationExpressionStructure,IdentifierStructure, LiteralStructure>
     {
       
     }
@@ -681,9 +745,80 @@ public static class Program
             return true;
         }
     }
-    public class FuncBodyStructure : StructureElementList<StructureElementControl<FunctionInvokationExpressionStructure,FunctionInvokationExpressionStructure>>
+
+    public class IfExpression: ExpressionStructure
+    {
+        public override string ToString()
+        {
+            return $"if({IfInsides}){{{FuncBody}}}";
+        }
+
+        public InvokationParameterStructure IfInsides = new();
+        public FuncBodyStructure FuncBody = new();
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            if (!reader.PeekString("if", true)) return false;
+            reader.SkipAllWhiteSpace();
+            if (reader.Peek() != '(') return false;
+            reader.Advance();
+            reader.SkipAllWhiteSpace();
+            if (reader.Peek() != ')')
+            {
+                reader.SkipAllWhiteSpace();
+                if (!IfInsides.ParseElement(reader)) return false;
+                reader.SkipAllWhiteSpace();
+                if (reader.Peek() == ')')
+                {
+                    reader.Advance();
+                }
+                else
+                {
+                    Debugger.Break();
+                    return false;
+                }
+            }else reader.Advance();
+
+            reader.SkipAllWhiteSpace();
+            FuncBody.ParseElement(reader);
+            //Debugger.Break();
+            //TODO: else
+
+            return true;
+        }
+    }
+    public class FuncBodyStructure : StructureElementList<StructureElementControl<FuncBodyStructure,IfExpression,FunctionInvokationExpressionStructure>>
     {
         public override char Separator => ';';
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            if(reader.Peek()=='{')
+            {
+                reader.Advance();
+                //Do method body
+                if (!base.DoParseElement(reader))
+                {
+                    //empty body
+                    
+                }
+                reader.SkipAllWhiteSpace();
+                if (reader.Peek() == '}')
+                {
+                    reader.Advance();
+                    reader.SkipAllWhiteSpace();
+                    return true;
+                }
+            }
+            else
+            {
+                //TODO: single line
+                return false;
+            }
+            Debugger.Break();
+            return false;
+        }
     }
 
     public class FuncStructure : MemberStructure<MethodModifiers>
@@ -725,30 +860,13 @@ public static class Program
                 reader.Advance();
                 return true;
             }
-            else if(reader.Peek()=='{')
-            {
-                reader.Advance();
-                //Do method body
-                FuncBody.ParseElement(reader);
-                reader.SkipAllWhiteSpace();
-                if (reader.Peek() == '}')
-                {
-                    reader.Advance();
-                    reader.SkipAllWhiteSpace();
-                    return true;
-                }
-                else //????what
-                Debugger.Break();
-                return false;
-            }
             else
             {
-                Debugger.Break();
-                return false;
+                if (FuncBody.ParseElement(reader)) return true;
+                
             }
             
-
-            
+            //Debugger.Break();
             return false;
         }
     }
