@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="CreditedCode\" />
+      <Content Include="bin\Debug\net10.0\AssemblyShard.dll" />
     </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
@@ -10,7 +11,6 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using AsmResolver.DotNet.Bundles;
-using HarmonyLib;
 
 namespace Amethyst;
 
@@ -129,6 +129,7 @@ public static class Program
         if (!f) throw new Exception("???");
         //string asmName = "AssemblyShard";
         var ilc = new ILCompiler("AssemblyShard");
+        ilc.ReferencedAssemblies.AddRange(AppDomain.CurrentDomain.GetAssemblies());
 
         sh.CompileElement(ilc);
 
@@ -200,10 +201,37 @@ public static class Program
         public MethodBuilder MethodBuilder;
         public ILGenerator IL;
 
+        public List<Assembly> ReferencedAssemblies = new();
+        public List<TypeBuilder> AddedTypes = new();
+
+
+        public Type GetType(string name, bool throwIfFalse)
+        {
+            foreach (var typeBuilder in AddedTypes)
+            {
+                if (typeBuilder.FullName == name) return typeBuilder;
+                if (typeBuilder.Name == name) return typeBuilder;
+            }
+
+            foreach (var asm in ReferencedAssemblies)
+            {
+                foreach (var typeBuilder in asm.GetTypes())
+                {
+                    if (typeBuilder.FullName == name) return typeBuilder;
+                    if (typeBuilder.Name == name) return typeBuilder;
+                }
+            }
+
+            if (throwIfFalse)
+                throw new TypeLoadException();
+            return null;
+        }
+
         public Type GetType(String typename)
         {
-            var a = AccessTools.TypeByName(typename);
-            var localType = AsmBuilder.GetType(typename, false);
+            //var a = AccessTools.TypeByName(typename);
+            //if (a != null) return a;
+            var localType = this.GetType(typename, false);
             if (localType is not null)
                 return localType;
             return null;
@@ -352,6 +380,8 @@ public static class Program
                 member.CompileElement(ilc);
             }
 
+            ilc.TypeBuilder.CreateType();
+
 
             ilc.TypeBuilder = null;
             return true;
@@ -402,6 +432,8 @@ public static class Program
 
     public class ShardStructure : StructureElementArray<ClassStructure>, ICompileable
     {
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+
         public bool DoCompileElement(Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
@@ -685,45 +717,439 @@ public static class Program
 
     public abstract class AbstractLiteralStructure : StructureElement
     {
-    }
+        public abstract Type[] LiteralTypeOptions { get; }
+        public abstract Type ResolvedType { get; }
+        protected string ReadWord;
 
-    public class NumberLiteralStructure : AbstractLiteralStructure
-    {
+        public abstract void Emit(ILGenerator il);
+
         public override string ToString()
         {
-            if (IsInteger) return BiggestInteger.ToString();
-            if (IsFloat) return BiggestFloat.ToString();
-            return "NAN";
+            return ReadWord;
+        }
+    }
+
+    public abstract class AbstractIntegerLiteral : AbstractLiteralStructure
+    {
+        public override void Emit(ILGenerator il)
+        {
+            if (IntValue.HasValue)  il.Emit(OpCodes.Ldc_I4,IntValue.Value);
+            else if (UIntValue.HasValue)il.Emit(OpCodes.Ldc_I4,UIntValue.Value);
+            else if (LongValue.HasValue) il.Emit(OpCodes.Ldc_I8,LongValue.Value);
+            else if (ULongValue.HasValue) il.Emit(OpCodes.Ldc_I8,ULongValue.Value);
+            else throw new NotImplementedException();
         }
 
-        public System.Int128 BiggestInteger;
-        public bool IsInteger;
-        public System.Decimal BiggestFloat;
-        public bool IsFloat;
+        public override Type[] LiteralTypeOptions =>
+        [
+            typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(Int128), typeof(UInt128)
+        ];
 
+        public char[] AllowedChars =
+        [
+            '_', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            'U', 'u', 'L', 'l', 'x', 'X',
+            'A', 'B', 'C', 'D', 'E', 'F',
+            'a', 'b', 'c', 'd', 'e', 'f',
+            'b', 'B'
+        ];
+
+        public bool Unsigned = false;
+        public bool Long = false;
+
+        public int? IntValue;
+        public uint? UIntValue;
+        public long? LongValue;
+        public ulong? ULongValue;
+
+        public override Type ResolvedType
+        {
+            get
+            {
+                if (IntValue.HasValue) return IntValue.Value.GetType();
+                if (UIntValue.HasValue) return UIntValue.Value.GetType();
+                if (LongValue.HasValue) return LongValue.Value.GetType();
+                if (ULongValue.HasValue) return ULongValue.Value.GetType();
+                return null;
+            }
+        }
+
+        protected bool StartedWritingDigits = false;
+        protected bool EndedWritingDigits = false;
+        protected StringBuilder DigitsWord = new();
+    }
+
+    public class DecimalIntegerLiteral : AbstractIntegerLiteral
+    {
         protected override bool DoParseElement(SimpleFileReader reader)
         {
-            var word = reader.PeekWord;
-            if (Int128.TryParse(word, out BiggestInteger))
+            ReadWord = reader.PeekWord;
+            reader.Advance(ReadWord);
+            for (int i = 0; i < ReadWord.Length; i++)
             {
-                reader.Advance(word);
-                IsInteger = true;
-                return true;
+                char cur = ReadWord[i];
+                if (!AllowedChars.Contains(cur)) return false;
+                if (i == 0 && cur == '_') return false;
+                if (i == ReadWord.Length - 1 && cur == '_') return false;
+                if (i == 1 && cur == 'x' || cur == 'X' && ReadWord[0] == '0') return false;
+                if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0') return false;
+                if (char.IsDigit(cur) && !StartedWritingDigits)
+                    StartedWritingDigits = true;
+                if (cur == 'U' || cur == 'u')
+                {
+                    EndedWritingDigits = true;
+                    if (!Unsigned) Unsigned = true;
+                    else return false;
+                }
+
+                if (cur == 'L' || cur == 'l')
+                {
+                    EndedWritingDigits = true;
+                    if (!Long) Long = true;
+                    else return false;
+                }
+
+                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                {
+                    DigitsWord.Append(cur);
+                }
             }
 
-            if (Decimal.TryParse(word, out BiggestFloat))
+            if (DigitsWord.Length > 0)
             {
-                reader.Advance(word);
-                IsFloat = true;
-                return true;
+                if (Long && Unsigned)
+                {
+                    if (ulong.TryParse(DigitsWord.ToString(), out ulong res))
+                    {
+                        this.ULongValue = res;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Long)
+                {
+                    if (long.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out long res1))
+                    {
+                        this.LongValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Unsigned)
+                {
+                    if (uint.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out uint res1))
+                    {
+                        this.UIntValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else
+                {
+                    if (int.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out int res1))
+                    {
+                        this.IntValue = res1;
+                        return true;
+                    }
+                    else if (uint.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out uint res2))
+                    {
+                        this.UIntValue = res2;
+                        return true;
+                    }
+                    else if (long.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out long res3))
+                    {
+                        this.LongValue = res3;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.Integer, null, out ulong res4))
+                    {
+                        this.ULongValue = res4;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+
+                return false;
             }
 
             return false;
         }
     }
 
+    public class HexadecimalIntegerLiteral : AbstractIntegerLiteral
+    {
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            ReadWord = reader.PeekWord;
+            reader.Advance(ReadWord);
+            for (int i = 0; i < ReadWord.Length; i++)
+            {
+                char cur = ReadWord[i];
+                if (!AllowedChars.Contains(cur)) return false;
+                if (i == 0 && cur == '_') return false;
+                if (i == ReadWord.Length - 1 && cur == '_') return false;
+                if (i == 1 && cur == 'x' || cur == 'X' && ReadWord[0] == '0')
+                {
+                    StartedWritingDigits = true;
+                }
+                else return false;
+
+                if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0') return false;
+                //if (char.IsDigit(cur) && !StartedWritingDigits)
+                //    StartedWritingDigits = true;
+                if (cur == 'U' || cur == 'u')
+                {
+                    EndedWritingDigits = true;
+                    if (!Unsigned) Unsigned = true;
+                    else return false;
+                }
+
+                if (cur == 'L' || cur == 'l')
+                {
+                    EndedWritingDigits = true;
+                    if (!Long) Long = true;
+                    else return false;
+                }
+
+                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                {
+                    DigitsWord.Append(cur);
+                }
+            }
+
+            if (DigitsWord.Length > 0)
+            {
+                if (Long && Unsigned)
+                {
+                    if (ulong.TryParse(DigitsWord.ToString(), out ulong res))
+                    {
+                        this.ULongValue = res;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Long)
+                {
+                    if (long.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out long res1))
+                    {
+                        this.LongValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Unsigned)
+                {
+                    if (uint.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out uint res1))
+                    {
+                        this.UIntValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else
+                {
+                    if (int.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out int res1))
+                    {
+                        this.IntValue = res1;
+                        return true;
+                    }
+                    else if (uint.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out uint res2))
+                    {
+                        this.UIntValue = res2;
+                        return true;
+                    }
+                    else if (long.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out long res3))
+                    {
+                        this.LongValue = res3;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.HexNumber, null, out ulong res4))
+                    {
+                        this.ULongValue = res4;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+    }
+
+    public class BinaryIntegerLiteral : AbstractIntegerLiteral
+    {
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            ReadWord = reader.PeekWord;
+            reader.Advance(ReadWord);
+            for (int i = 0; i < ReadWord.Length; i++)
+            {
+                char cur = ReadWord[i];
+                if (!AllowedChars.Contains(cur)) return false;
+                if (i == 0 && cur == '_') return false;
+                if (i == ReadWord.Length - 1 && cur == '_') return false;
+                if (i == 1 && cur == 'x' || cur == 'X' && ReadWord[0] == '0') return false;
+                if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0')
+                {
+                    StartedWritingDigits = true;
+                }
+                else return false;
+
+                //if (char.IsDigit(cur) && !StartedWritingDigits)
+                //    StartedWritingDigits = true;
+                if (cur == 'U' || cur == 'u')
+                {
+                    EndedWritingDigits = true;
+                    if (!Unsigned) Unsigned = true;
+                    else return false;
+                }
+
+                if (cur == 'L' || cur == 'l')
+                {
+                    EndedWritingDigits = true;
+                    if (!Long) Long = true;
+                    else return false;
+                }
+
+                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                {
+                    DigitsWord.Append(cur);
+                }
+            }
+
+            if (DigitsWord.Length > 0)
+            {
+                if (Long && Unsigned)
+                {
+                    if (ulong.TryParse(DigitsWord.ToString(), out ulong res))
+                    {
+                        this.ULongValue = res;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Long)
+                {
+                    if (long.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out long res1))
+                    {
+                        this.LongValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else if (Unsigned)
+                {
+                    if (uint.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out uint res1))
+                    {
+                        this.UIntValue = res1;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out ulong res2))
+                    {
+                        this.ULongValue = res2;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else
+                {
+                    if (int.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out int res1))
+                    {
+                        this.IntValue = res1;
+                        return true;
+                    }
+                    else if (uint.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out uint res2))
+                    {
+                        this.UIntValue = res2;
+                        return true;
+                    }
+                    else if (long.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out long res3))
+                    {
+                        this.LongValue = res3;
+                        return true;
+                    }
+                    else if (ulong.TryParse(DigitsWord.ToString(), NumberStyles.BinaryNumber, null, out ulong res4))
+                    {
+                        this.ULongValue = res4;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+    }
+
+    public class IntegerLiteralStructure : StructureElementControl<DecimalIntegerLiteral, HexadecimalIntegerLiteral,
+        BinaryIntegerLiteral>
+    {
+        public Type ResolvedType
+        {
+            get
+            {
+                if (this.Element is AbstractIntegerLiteral integer)
+                    return integer.ResolvedType;
+                return null;
+            }
+        }
+
+        //i think its done?
+        public void Emit(ILGenerator il)
+        {
+            if (this.Element is AbstractIntegerLiteral integer)
+                integer.Emit(il);
+        }
+    }
+
     public class StringLiteralStructure : AbstractLiteralStructure
     {
+        public override void Emit(ILGenerator il)
+        {
+            il.Emit(OpCodes.Ldstr,StringInterpretation);
+        }
+
         public override string ToString()
         {
             return $"\"{StringInterpretation}\"";
@@ -755,10 +1181,24 @@ public static class Program
             }
             else return false;
         }
+
+        public override Type[] LiteralTypeOptions => [typeof(string)];
+        public override Type ResolvedType => typeof(string);
     }
 
     public class BooleanLiteralStructure : AbstractLiteralStructure
     {
+        public override void Emit(ILGenerator il)
+        {
+            if (!this.Value.HasValue) throw new NotImplementedException();
+            if(this.Value.Value)
+                il.Emit(OpCodes.Ldc_I4_1);
+            else il.Emit(OpCodes.Ldc_I4_0);
+        }
+
+        public override Type[] LiteralTypeOptions => [typeof(bool)];
+        public override Type ResolvedType => typeof(bool);
+
         public override string ToString()
         {
             return Value.ToString();
@@ -780,13 +1220,13 @@ public static class Program
         }
     }
 
-    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure, NumberLiteralStructure,
+    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure, IntegerLiteralStructure,
         StringLiteralStructure>
     {
     }
 
-    public class InvokationParameterStructure : StructureElementControl<FunctionInvokationExpressionStructure,
-        IdentifierStructure, LiteralStructure>
+    public class InvokationParameterStructure : StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
+        IdentifierStructure>
     {
     }
 
@@ -797,7 +1237,7 @@ public static class Program
             if (c is not ILCompiler ilc) return false;
             var il = ilc.IL;
 
-            //TODO: left off here!
+            //TODO: left off here!      
 
             var methodName = this.MethodIdentifier[^1];
             var typeName = this.MethodIdentifier[..^1];
@@ -818,10 +1258,10 @@ public static class Program
                         switch (lit.Element)
                         {
                             case StringLiteralStructure str:
-                                paramTypes.Add(typeof(string));
+                                paramTypes.Add(str.ResolvedType);
                                 break;
-                            case NumberLiteralStructure num:
-                                Debugger.Break();
+                            case IntegerLiteralStructure num:
+                                paramTypes.Add(num.ResolvedType);
                                 break;
                         }
 
@@ -832,10 +1272,10 @@ public static class Program
                 }
             }
 
-            Type theType = AccessTools.TypeByName(typeName.FullIdentifier);
+            Type theType = ilc.GetType(typeName.FullIdentifier);
             if (theType == null) throw new TypeLoadException("Type not found!");
 
-            var gotMethod = AccessTools.Method(theType, methodName.Identifier,
+            var gotMethod = theType.GetMethod(methodName.Identifier,
                 paramTypes.ToArray());
 
             foreach (var para in this.Parameters.ElementList)
@@ -847,10 +1287,10 @@ public static class Program
                         switch (lit.Element)
                         {
                             case StringLiteralStructure str:
-                                il.Emit(OpCodes.Ldstr, str.StringInterpretation);
+                                str.Emit(il);
                                 break;
-                            case NumberLiteralStructure num:
-                                Debugger.Break();
+                            case IntegerLiteralStructure num:
+                                num.Emit(il);
                                 break;
                         }
 
@@ -919,6 +1359,27 @@ public static class Program
         public override bool DoCompileElement(Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
+            
+            if (IfInsides.Element is ICompileable compileable)
+            {
+                compileable.CompileElement(c);
+            }
+            if (IfInsides.Element is LiteralStructure lit&&lit.Element is AbstractLiteralStructure em)
+            {
+                em.Emit(ilc.IL);
+            }
+            //TODO: some stack validation i need to make
+            
+            
+            var l =ilc.IL.DefineLabel(); ;
+            
+            ilc.IL.Emit(OpCodes.Brfalse, l);
+
+            FuncBody.CompileElement(c);
+
+            ilc.IL.MarkLabel(l);
+            
+            
             return true;
         }
 
@@ -1377,7 +1838,7 @@ public static class IDefineStructure
 
     public interface ICompileable
     {
-        public virtual List<Type> SupportedCompilers => new();
+        public abstract List<Type> SupportedCompilers { get; }
 
         public sealed bool HiddenCompileElement(Compiler c)
         {
