@@ -203,7 +203,31 @@ public static class Program
 
         public List<Assembly> ReferencedAssemblies = new();
         public List<TypeBuilder> AddedTypes = new();
+        private Stack<Type> TypeStack = new();
 
+        public void Push(Type t)
+        {
+            if(t!=typeof(void))
+                TypeStack.Push(t);
+        }
+
+        public Type Pop()
+        {
+            if (TypeStack.Count == 0) return typeof(void);
+           return TypeStack.Pop();
+        }
+        public Type[] Pop(int amount,bool reverse)
+        {
+            if (TypeStack.Count == 0) return [];
+            Type[] types = new Type[amount];
+            for (int i = 0; i < amount; i++)
+            {
+                types[i] = TypeStack.Pop();
+            }
+            if(reverse)
+                types = types.Reverse().ToArray();
+            return types;
+        }
 
         public Type GetType(string name, bool throwIfFalse)
         {
@@ -715,29 +739,50 @@ public static class Program
         public abstract bool DoCompileElement(Compiler c);
     }
 
-    public abstract class AbstractLiteralStructure : StructureElement
+    public abstract class AbstractLiteralStructure : StructureElement,ICompileable
     {
         public abstract Type[] LiteralTypeOptions { get; }
         public abstract Type ResolvedType { get; }
         protected string ReadWord;
 
-        public abstract void Emit(ILGenerator il);
 
         public override string ToString()
         {
             return ReadWord;
         }
+
+        public List<Type> SupportedCompilers { get; } = [typeof(ILCompiler)];
+        public abstract bool DoCompileElement(Compiler c);
     }
 
     public abstract class AbstractIntegerLiteral : AbstractLiteralStructure
     {
-        public override void Emit(ILGenerator il)
+        public override bool DoCompileElement(Compiler c)
         {
-            if (IntValue.HasValue)  il.Emit(OpCodes.Ldc_I4,IntValue.Value);
-            else if (UIntValue.HasValue)il.Emit(OpCodes.Ldc_I4,UIntValue.Value);
-            else if (LongValue.HasValue) il.Emit(OpCodes.Ldc_I8,LongValue.Value);
-            else if (ULongValue.HasValue) il.Emit(OpCodes.Ldc_I8,ULongValue.Value);
+            if (c is not ILCompiler ilc) return false;
+            var il = ilc.IL;
+            if (IntValue.HasValue)
+            {
+                ilc.Push(typeof(int));
+                il.Emit(OpCodes.Ldc_I4,IntValue.Value);
+            }
+            else if (UIntValue.HasValue)
+            {
+                ilc.Push(typeof(uint));
+                il.Emit(OpCodes.Ldc_I4,UIntValue.Value);
+            }
+            else if (LongValue.HasValue)
+            {
+                ilc.Push(typeof(long));
+                il.Emit(OpCodes.Ldc_I8,LongValue.Value);
+            }
+            else if (ULongValue.HasValue)
+            {
+                ilc.Push(typeof(ulong));
+                il.Emit(OpCodes.Ldc_I8,ULongValue.Value);
+            }
             else throw new NotImplementedException();
+            return true;
         }
 
         public override Type[] LiteralTypeOptions =>
@@ -793,7 +838,7 @@ public static class Program
                 if (i == ReadWord.Length - 1 && cur == '_') return false;
                 if (i == 1 && cur == 'x' || cur == 'X' && ReadWord[0] == '0') return false;
                 if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0') return false;
-                if (char.IsDigit(cur) && !StartedWritingDigits)
+                if (cur!='_' && !StartedWritingDigits)
                     StartedWritingDigits = true;
                 if (cur == 'U' || cur == 'u')
                 {
@@ -802,14 +847,18 @@ public static class Program
                     else return false;
                 }
 
-                if (cur == 'L' || cur == 'l')
+                else if (cur == 'L' || cur == 'l')
                 {
                     EndedWritingDigits = true;
                     if (!Long) Long = true;
                     else return false;
+                }else if (EndedWritingDigits)
+                {
+                    Debugger.Break();
+                    return false;
                 }
 
-                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                if (cur!='_' && StartedWritingDigits && !EndedWritingDigits)
                 {
                     DigitsWord.Append(cur);
                 }
@@ -905,11 +954,11 @@ public static class Program
                 if (i == 1 && cur == 'x' || cur == 'X' && ReadWord[0] == '0')
                 {
                     StartedWritingDigits = true;
+                    continue;
                 }
-                else return false;
 
                 if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0') return false;
-                //if (char.IsDigit(cur) && !StartedWritingDigits)
+                //if (cur!='_' && !StartedWritingDigits)
                 //    StartedWritingDigits = true;
                 if (cur == 'U' || cur == 'u')
                 {
@@ -917,15 +966,18 @@ public static class Program
                     if (!Unsigned) Unsigned = true;
                     else return false;
                 }
-
-                if (cur == 'L' || cur == 'l')
+                else if (cur == 'L' || cur == 'l')
                 {
                     EndedWritingDigits = true;
                     if (!Long) Long = true;
                     else return false;
+                }else if (EndedWritingDigits)
+                {
+                    Debugger.Break();
+                    return false;
                 }
 
-                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                if (cur!='_'  && StartedWritingDigits && !EndedWritingDigits)
                 {
                     DigitsWord.Append(cur);
                 }
@@ -1022,10 +1074,11 @@ public static class Program
                 if (i == 1 && cur == 'b' || cur == 'B' && ReadWord[0] == '0')
                 {
                     StartedWritingDigits = true;
+                    continue;
                 }
-                else return false;
+                
 
-                //if (char.IsDigit(cur) && !StartedWritingDigits)
+                //if (cur!='_' && !StartedWritingDigits)
                 //    StartedWritingDigits = true;
                 if (cur == 'U' || cur == 'u')
                 {
@@ -1033,15 +1086,18 @@ public static class Program
                     if (!Unsigned) Unsigned = true;
                     else return false;
                 }
-
-                if (cur == 'L' || cur == 'l')
+                else if (cur == 'L' || cur == 'l')
                 {
                     EndedWritingDigits = true;
                     if (!Long) Long = true;
                     else return false;
+                }else if (EndedWritingDigits)
+                {
+                    Debugger.Break();
+                    return false;
                 }
 
-                if (char.IsDigit(cur) && StartedWritingDigits && !EndedWritingDigits)
+                if (cur!='_' && StartedWritingDigits && !EndedWritingDigits)
                 {
                     DigitsWord.Append(cur);
                 }
@@ -1123,7 +1179,7 @@ public static class Program
     }
 
     public class IntegerLiteralStructure : StructureElementControl<DecimalIntegerLiteral, HexadecimalIntegerLiteral,
-        BinaryIntegerLiteral>
+        BinaryIntegerLiteral>,ICompileable
     {
         public Type ResolvedType
         {
@@ -1136,23 +1192,31 @@ public static class Program
         }
 
         //i think its done?
-        public void Emit(ILGenerator il)
+
+
+        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(Compiler c)
         {
-            if (this.Element is AbstractIntegerLiteral integer)
-                integer.Emit(il);
+            return ((ICompileable)Element).CompileElement(c);
         }
     }
 
     public class StringLiteralStructure : AbstractLiteralStructure
     {
-        public override void Emit(ILGenerator il)
-        {
-            il.Emit(OpCodes.Ldstr,StringInterpretation);
-        }
+   
 
         public override string ToString()
         {
             return $"\"{StringInterpretation}\"";
+        }
+
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            var il = ilc.IL;
+            il.Emit(OpCodes.Ldstr,StringInterpretation);
+            ilc.Push(typeof(string));
+            return true;
         }
 
         public System.String StringInterpretation = "";
@@ -1188,13 +1252,7 @@ public static class Program
 
     public class BooleanLiteralStructure : AbstractLiteralStructure
     {
-        public override void Emit(ILGenerator il)
-        {
-            if (!this.Value.HasValue) throw new NotImplementedException();
-            if(this.Value.Value)
-                il.Emit(OpCodes.Ldc_I4_1);
-            else il.Emit(OpCodes.Ldc_I4_0);
-        }
+     
 
         public override Type[] LiteralTypeOptions => [typeof(bool)];
         public override Type ResolvedType => typeof(bool);
@@ -1202,6 +1260,18 @@ public static class Program
         public override string ToString()
         {
             return Value.ToString();
+        }
+
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            var il = ilc.IL;
+            if (!this.Value.HasValue) throw new NotImplementedException();
+            if(this.Value.Value)
+                il.Emit(OpCodes.Ldc_I4_1);
+            else il.Emit(OpCodes.Ldc_I4_0);
+            ilc.Push(typeof(bool));
+            return true;
         }
 
         public bool? Value;
@@ -1221,13 +1291,23 @@ public static class Program
     }
 
     public class LiteralStructure : StructureElementControl<BooleanLiteralStructure, IntegerLiteralStructure,
-        StringLiteralStructure>
+        StringLiteralStructure>, ICompileable
     {
+        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(Compiler c)
+        {
+            return ((ICompileable)Element).CompileElement(c);
+        }
     }
 
     public class InvokationParameterStructure : StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
         IdentifierStructure>
     {
+        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(Compiler c)
+        {
+            return ((ICompileable)Element).CompileElement(c);
+        }
     }
 
     public class FunctionInvokationExpressionStructure : ExpressionStructure
@@ -1248,29 +1328,13 @@ public static class Program
             }
 
             //TODO: get method with params
-            List<Type> paramTypes = new();
             foreach (var para in this.Parameters.ElementList)
             {
-                switch (para.Element)
-                {
-                    case LiteralStructure lit:
-
-                        switch (lit.Element)
-                        {
-                            case StringLiteralStructure str:
-                                paramTypes.Add(str.ResolvedType);
-                                break;
-                            case IntegerLiteralStructure num:
-                                paramTypes.Add(num.ResolvedType);
-                                break;
-                        }
-
-                        break;
-                    case IdentifierStructure id:
-                        Debugger.Break();
-                        break;
-                }
+                para.CompileElement(c);
             }
+            var pCount = Parameters.ElementList.Count;
+            var paramTypes = ilc.Pop(pCount,true);
+            
 
             Type theType = ilc.GetType(typeName.FullIdentifier);
             if (theType == null) throw new TypeLoadException("Type not found!");
@@ -1278,28 +1342,7 @@ public static class Program
             var gotMethod = theType.GetMethod(methodName.Identifier,
                 paramTypes.ToArray());
 
-            foreach (var para in this.Parameters.ElementList)
-            {
-                switch (para.Element)
-                {
-                    case LiteralStructure lit:
-
-                        switch (lit.Element)
-                        {
-                            case StringLiteralStructure str:
-                                str.Emit(il);
-                                break;
-                            case IntegerLiteralStructure num:
-                                num.Emit(il);
-                                break;
-                        }
-
-                        break;
-                    case IdentifierStructure id:
-                        Debugger.Break();
-                        break;
-                }
-            }
+            
 
             il.EmitCall(OpCodes.Call, gotMethod, null);
 
@@ -1364,20 +1407,34 @@ public static class Program
             {
                 compileable.CompileElement(c);
             }
-            if (IfInsides.Element is LiteralStructure lit&&lit.Element is AbstractLiteralStructure em)
-            {
-                em.Emit(ilc.IL);
-            }
+           
+            
+            //TODO: type conversion
+            if (ilc.Pop() != typeof(bool)) throw new TypeLoadException($"Not convertible to bool");
+            
             //TODO: some stack validation i need to make
             
             
             var l =ilc.IL.DefineLabel(); ;
+            var skipElse = ilc.IL.DefineLabel();
             
             ilc.IL.Emit(OpCodes.Brfalse, l);
 
             FuncBody.CompileElement(c);
 
+            if (Else.Element != null)
+            {
+                ilc.IL.Emit(OpCodes.Br,skipElse);
+            }
+            
             ilc.IL.MarkLabel(l);
+            
+            if (Else.Element != null)
+            {
+                Else.CompileElement(ilc);
+            
+                ilc.IL.MarkLabel(skipElse);
+            }
             
             
             return true;
@@ -1390,6 +1447,7 @@ public static class Program
 
         public InvokationParameterStructure IfInsides = new();
         public FuncBodyStructure FuncBody = new();
+        public StructureElementControl<IfExpression, FuncBodyStructure> Else;
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -1418,6 +1476,13 @@ public static class Program
 
             reader.SkipAllWhiteSpace();
             FuncBody.ParseElement(reader);
+
+            if (reader.PeekString("else", true))
+            {
+                Else = new();
+                Else.ParseElement(reader);
+            }
+            
             //Debugger.Break();
             //TODO: else
 
@@ -1504,6 +1569,7 @@ public static class Program
                     throw new ArgumentOutOfRangeException();
             }
 
+            bool setEntry = false;
             foreach (var v in MyModifiers.ElementList.Select(a => a.Value))
             {
                 switch (v)
@@ -1511,10 +1577,11 @@ public static class Program
                     case MethodModifiers.entry:
                         if (ilc.EntryPoint == null)
                         {
-                            ilc.EntryPoint = ilc.MethodBuilder;
+                            setEntry = true;
                         }
                         else
                         {
+                            throw new Exception("???");
                             //TODO: this is an error.
                             return false;
                         }
@@ -1546,6 +1613,10 @@ public static class Program
                 ilc.GetType(this.MyTypeReference.FullIdentifier),
                 this.Parameters.ElementList.Select(a => ilc.GetType(a.MyTypeReference.FullIdentifier)).ToArray()
             );
+            if (setEntry)
+            {
+                            ilc.EntryPoint = ilc.MethodBuilder;
+            }
             for (int i = 0; i < Parameters.ElementList.Count; i++)
             {
                 var p = Parameters.ElementList[i];
