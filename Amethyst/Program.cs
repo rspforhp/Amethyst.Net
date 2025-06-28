@@ -38,7 +38,22 @@ public static class Extensions
             return true;
         return false;
     }
+    public static bool CompileElement<T1, T2, T3, T4, T5,T6>(this StructureElementControl<T1, T2, T3, T4, T5,T6> control,
+        Compiler c)
+        where T1 : StructureElement, ICompileable, new()
+        where T2 : StructureElement, ICompileable, new()
+        where T3 : StructureElement, ICompileable, new()
+        where T4 : StructureElement, ICompileable, new()
+        where T5 : StructureElement, ICompileable, new()
+        where T6 : StructureElement, ICompileable, new()
+    {
+        if (control.Element is ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
 
+        return false;
+    }
     public static bool CompileElement<T1, T2, T3, T4, T5>(this StructureElementControl<T1, T2, T3, T4, T5> control,
         Compiler c)
         where T1 : StructureElement, ICompileable, new()
@@ -90,7 +105,7 @@ public static class Extensions
             return HandleCompileElement(comp, c);
         }
 
-        return false;
+        throw new NotImplementedException();
     }
 
     public static bool IsValidIdentifier(this string text)
@@ -123,7 +138,7 @@ public static class Program
     public static void Main(string[] args)
     {
         Console.WriteLine("Compiling shard!");
-        FileReader.OpenFile(@"../../../hello_world.shard");
+        FileReader.OpenFile(@"../../../hello_world.shard.cs");
         var sh = new ShardStructure();
         var f = sh.ParseElement(FileReader);
         if (!f) throw new Exception("???");
@@ -204,6 +219,7 @@ public static class Program
         public List<Assembly> ReferencedAssemblies = new();
         public List<TypeBuilder> AddedTypes = new();
         private Stack<Type> TypeStack = new();
+        public Dictionary<string, LocalBuilder> Locals = new();
 
         public void Push(Type t)
         {
@@ -346,6 +362,14 @@ public static class Program
                   }
                   """);
             return true;
+        }
+
+        public LocalBuilder DeclareLocal(Type getType,string name)
+        {
+            var declareLocal = IL.DeclareLocal(getType,false);
+            declareLocal.SetLocalSymInfo(name);
+            Locals.Add(name,declareLocal);
+            return declareLocal;
         }
     }
 
@@ -548,7 +572,7 @@ public static class Program
         public SingleIdentifierStructure MyIdentifier { get; }
     }
 
-    public class IdentifierStructure : StructureElementList<SingleIdentifierStructure>
+    public class IdentifierStructure : StructureElementList<SingleIdentifierStructure>,ICompileable
     {
         public SingleIdentifierStructure this[Index index]
         {
@@ -580,6 +604,21 @@ public static class Program
                     ElementList.Add(new SingleIdentifierStructure() { Identifier = s, Position = this.Position });
                 }
             }
+        }
+
+        public List<Type> SupportedCompilers => [typeof(ILCompiler)];
+        public bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+
+            if (ilc.Locals.TryGetValue(this.FullIdentifier,out var l))
+            {
+                ilc.IL.Emit(OpCodes.Ldloc,l );
+                ilc.Push(l.LocalType);
+            }
+            else throw new NotImplementedException();
+
+            return true;
         }
     }
 
@@ -1300,7 +1339,7 @@ public static class Program
         }
     }
 
-    public class InvokationParameterStructure : StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
+    public class ValueStructure : StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
         IdentifierStructure>
     {
         public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
@@ -1355,7 +1394,7 @@ public static class Program
             return $"{MethodIdentifier}({Parameters})";
         }
 
-        public StructureElementList<InvokationParameterStructure> Parameters = new();
+        public StructureElementList<ValueStructure> Parameters = new();
 
         public IdentifierStructure MethodIdentifier = new();
 
@@ -1445,7 +1484,7 @@ public static class Program
             return $"if({IfInsides}){{{FuncBody}}}";
         }
 
-        public InvokationParameterStructure IfInsides = new();
+        public ValueStructure IfInsides = new();
         public FuncBodyStructure FuncBody = new();
         public StructureElementControl<IfExpression, FuncBodyStructure> Else;
 
@@ -1482,6 +1521,87 @@ public static class Program
                 Else = new();
                 Else.ParseElement(reader);
             }
+            return true;
+        }
+    }
+
+    
+      public class ForExpression : ExpressionStructure
+    {
+        public class ForList : StructureElementList<FuncBodyElement>
+        {
+            public override char Separator => ';';
+        }
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            
+           // if (IfInsides.Element is ICompileable compileable)
+           // {
+           //     compileable.CompileElement(c);
+           // }
+
+           var condition=ilc.IL.DefineLabel();
+           var after=ilc.IL.DefineLabel();
+           
+           
+           IfInsides.ElementList[0].CompileElement(c);
+
+           ilc.IL.MarkLabel(condition);
+           
+           IfInsides.ElementList[1].CompileElement(c);
+            
+            if (ilc.Pop() != typeof(bool)) throw new TypeLoadException($"Not convertible to bool");
+            
+            ilc.IL.Emit(OpCodes.Brfalse, after);
+
+            FuncBody.CompileElement(c);
+            
+           IfInsides.ElementList[2].CompileElement(c);
+
+           ilc.IL.Emit(OpCodes.Br, condition);
+            
+            ilc.IL.MarkLabel(after);
+            return true;
+        }
+
+        public override string ToString()
+        {
+            return $"for({IfInsides}){{{FuncBody}}}";
+        }
+
+        public ForList IfInsides = new();
+        public FuncBodyStructure FuncBody = new();
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            if (!reader.PeekString("for", true)) return false;
+            reader.SkipAllWhiteSpace();
+            if (reader.Peek() != '(') return false;
+            reader.Advance();
+            reader.SkipAllWhiteSpace();
+            if (reader.Peek() != ')')
+            {
+                reader.SkipAllWhiteSpace();
+                if (!IfInsides.ParseElement(reader)) return false;
+                reader.SkipAllWhiteSpace();
+                if (reader.Peek() == ')')
+                {
+                    reader.Advance();
+                }
+                else
+                {
+                    Debugger.Break();
+                    return false;
+                }
+            }
+            else reader.Advance();
+
+            reader.SkipAllWhiteSpace();
+            FuncBody.ParseElement(reader);
+
+           
             
             //Debugger.Break();
             //TODO: else
@@ -1490,8 +1610,120 @@ public static class Program
         }
     }
 
-    public class FuncBodyStructure : StructureElementList<
-        StructureElementControl<FuncBodyStructure, IfExpression, FunctionInvokationExpressionStructure>>, ICompileable
+    public class OperatorExpression : ExpressionStructure
+    {
+        public ValueStructure Left = new();
+        public ValueStructure Right = new();
+        public string Operator = "";
+
+        public override string ToString()
+        {
+            return $"{Left} {Operator} {Right}";
+        }
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            var l=Left.ParseElement(reader);
+            reader.SkipAllWhiteSpace();
+            Operator = reader.ReadUntil(a => char.IsDigit(a) || char.IsLetter(a) || a=='('||a==')'||a=='{'||a=='}'||char.IsWhiteSpace(a));
+            reader.SkipAllWhiteSpace();
+            var r=Right.ParseElement(reader);
+            var o = Operator.Length > 0;
+            reader.SkipAllWhiteSpace();
+            return l&&o || r&&o;
+        }
+
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            
+            switch (Operator)
+            {
+                case "<":
+                {
+                    Left.CompileElement(c);
+                    ilc.Pop();
+                    Right.CompileElement(c);
+                    ilc.Pop();
+                    ilc.IL.Emit(OpCodes.Clt);
+                    ilc.Push(typeof(bool));
+                    break;
+                }
+                case "++":
+                {
+                    Left.CompileElement(c);
+                    var a=ilc.Pop();
+                    ilc.IL.Emit(OpCodes.Ldc_I4_1);
+                    ilc.IL.Emit(OpCodes.Add);
+                    if (Left.Element is not IdentifierStructure id) throw new NotImplementedException();
+                    ilc.IL.Emit(OpCodes.Stloc,ilc.Locals[id.FullIdentifier]);
+                    break;
+                }
+                default:
+                    throw new NotImplementedException();
+            }
+            return true;
+        }
+    }
+
+
+    public class VariableDeclaration : ExpressionStructure
+    {
+        public TypeReferenceStructure VariableType=new();
+        public SingleIdentifierStructure Identifier = new();
+        public ValueStructure Value = new();
+
+        public override string ToString()
+        {
+            return $"{VariableType.FullIdentifier} {Identifier.Identifier} = {Value.ToString()}";
+        }
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            if (reader.PeekString("var", true))
+            {
+                //TODO:
+                Debugger.Break();
+            }
+            else VariableType.ParseElement(reader);
+            reader.SkipAllWhiteSpace();
+            Identifier.ParseElement(reader);
+            reader.SkipAllWhiteSpace();
+            if (reader.PeekString("=", true))
+            {
+                //TODO:
+                reader.SkipAllWhiteSpace();
+                Value.ParseElement(reader);
+                return true;
+            }else if (reader.PeekString(";",false)) return true;
+
+            return false;
+        }
+
+        public override bool DoCompileElement(Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+
+            
+            var local = ilc.DeclareLocal(ilc.GetType(this.VariableType.FullIdentifier,true), this.Identifier.Identifier);
+
+            if (this.Value.Size > 0)
+            {
+                Value.CompileElement(c);
+                ilc.IL.Emit(OpCodes.Stloc,local);
+            }
+
+            return true;
+        }
+    }
+    public class FuncBodyElement :
+    StructureElementControl<FuncBodyStructure,VariableDeclaration, IfExpression,ForExpression,FunctionInvokationExpressionStructure,OperatorExpression>
+    {
+        
+    }
+    public class FuncBodyStructure : StructureElementList<FuncBodyElement>, ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
@@ -1948,6 +2180,23 @@ public static class IDefineStructure
 
     //TODO: make more if i need to lol
     //make more compile too if i do that
+    public class StructureElementControl<T1, T2, T3, T4, T5,T6> : StructureElementControl<T1, T2, T3, T4,T5>
+        where T1 : StructureElement, new()
+        where T2 : StructureElement, new()
+        where T3 : StructureElement, new()
+        where T4 : StructureElement, new()
+        where T5 : StructureElement, new()
+        where T6 : StructureElement, new()
+    {
+        protected T6 _T6 = new();
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            if (base.DoParseElement(reader)) return true;
+            return HandleElement(ref _T6, reader);
+        }
+    }
+
     public class StructureElementControl<T1, T2, T3, T4, T5> : StructureElementControl<T1, T2, T3, T4>
         where T1 : StructureElement, new()
         where T2 : StructureElement, new()

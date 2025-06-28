@@ -17,4 +17,9 @@
       <Content Include="bin\Debug\net10.0\AssemblyShard.dll" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="hello_world.shard.cs" />
+      <None Include="hello_world.shard.cs" />
+    </ItemGroup>
+
 </Project>
