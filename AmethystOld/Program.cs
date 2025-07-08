@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-using static Amethyst.IDefineStructure;
+using static AmethystOld.IDefineStructure;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
@@ -12,7 +12,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using AsmResolver.DotNet.Bundles;
 
-namespace Amethyst;
+namespace AmethystOld;
 
 public static class Extensions
 {
@@ -26,70 +26,60 @@ public static class Extensions
         '@', '_'
     };
 
-    public static bool CompileElement(this ICompileable toCompile, Compiler c)
+    public static bool CompileElement(this IDefineStructure.ICompileable toCompile, IDefineStructure.Compiler c)
     {
         return toCompile.HiddenCompileElement(c);
     }
 
 
-    private static bool HandleCompileElement<T>(T element, Compiler c) where T : ICompileable
+    private static bool HandleCompileElement<T>(T element, IDefineStructure.Compiler c) where T : IDefineStructure.ICompileable
     {
         if (element.CompileElement(c))
             return true;
         return false;
     }
-    public static bool CompileElement<T1, T2, T3, T4, T5,T6>(this StructureElementControl<T1, T2, T3, T4, T5,T6> control,
-        Compiler c)
-        where T1 : StructureElement, ICompileable, new()
-        where T2 : StructureElement, ICompileable, new()
-        where T3 : StructureElement, ICompileable, new()
-        where T4 : StructureElement, ICompileable, new()
-        where T5 : StructureElement, ICompileable, new()
-        where T6 : StructureElement, ICompileable, new()
+    public static bool CompileElement<T1, T2, T3, T4, T5,T6,T7>(this IDefineStructure.StructureElementControl<T1, T2, T3, T4, T5,T6,T7> control,
+        IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T3 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T4 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T5 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T6 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T7 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
     {
-        if (control.Element is ICompileable comp)
+        if (control.Element is IDefineStructure.ICompileable comp)
         {
             return HandleCompileElement(comp, c);
         }
 
         return false;
     }
-    public static bool CompileElement<T1, T2, T3, T4, T5>(this StructureElementControl<T1, T2, T3, T4, T5> control,
-        Compiler c)
-        where T1 : StructureElement, ICompileable, new()
-        where T2 : StructureElement, ICompileable, new()
-        where T3 : StructureElement, ICompileable, new()
-        where T4 : StructureElement, ICompileable, new()
-        where T5 : StructureElement, ICompileable, new()
+    public static bool CompileElement<T1, T2, T3, T4, T5,T6>(this IDefineStructure.StructureElementControl<T1, T2, T3, T4, T5,T6> control,
+        IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T3 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T4 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T5 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T6 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
     {
-        if (control.Element is ICompileable comp)
+        if (control.Element is IDefineStructure.ICompileable comp)
         {
             return HandleCompileElement(comp, c);
         }
 
         return false;
     }
-
-    public static bool CompileElement<T1, T2, T3, T4>(this StructureElementControl<T1, T2, T3, T4> control, Compiler c)
-        where T1 : StructureElement, ICompileable, new()
-        where T2 : StructureElement, ICompileable, new()
-        where T3 : StructureElement, ICompileable, new()
-        where T4 : StructureElement, ICompileable, new()
+    public static bool CompileElement<T1, T2, T3, T4, T5>(this IDefineStructure.StructureElementControl<T1, T2, T3, T4, T5> control,
+        IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T3 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T4 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T5 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
     {
-        if (control.Element is ICompileable comp)
-        {
-            return HandleCompileElement(comp, c);
-        }
-
-        return false;
-    }
-
-    public static bool CompileElement<T1, T2, T3>(this StructureElementControl<T1, T2, T3> control, Compiler c)
-        where T1 : StructureElement, ICompileable, new()
-        where T2 : StructureElement, ICompileable, new()
-        where T3 : StructureElement, ICompileable, new()
-    {
-        if (control.Element is ICompileable comp)
+        if (control.Element is IDefineStructure.ICompileable comp)
         {
             return HandleCompileElement(comp, c);
         }
@@ -97,10 +87,37 @@ public static class Extensions
         return false;
     }
 
-    public static bool CompileElement<T1, T2>(this StructureElementControl<T1, T2> control, Compiler c)
-        where T1 : StructureElement, ICompileable, new() where T2 : StructureElement, ICompileable, new()
+    public static bool CompileElement<T1, T2, T3, T4>(this IDefineStructure.StructureElementControl<T1, T2, T3, T4> control, IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T3 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T4 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
     {
-        if (control.Element is ICompileable comp)
+        if (control.Element is IDefineStructure.ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2, T3>(this IDefineStructure.StructureElementControl<T1, T2, T3> control, IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+        where T3 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+    {
+        if (control.Element is IDefineStructure.ICompileable comp)
+        {
+            return HandleCompileElement(comp, c);
+        }
+
+        return false;
+    }
+
+    public static bool CompileElement<T1, T2>(this IDefineStructure.StructureElementControl<T1, T2> control, IDefineStructure.Compiler c)
+        where T1 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new() where T2 : IDefineStructure.StructureElement, IDefineStructure.ICompileable, new()
+    {
+        if (control.Element is IDefineStructure.ICompileable comp)
         {
             return HandleCompileElement(comp, c);
         }
@@ -205,7 +222,7 @@ public static class Program
         }*/
     }
 
-    public class ILCompiler : Compiler
+    public class ILCompiler : IDefineStructure.Compiler
     {
         public MethodInfo EntryPoint;
         public string AsmName;
@@ -373,12 +390,12 @@ public static class Program
         }
     }
 
-    public class ClassStructure : StructureElement, IHaveAccessibility, IHaveClassModifiers, IHaveIdentifier,
-        ICompileable
+    public class ClassStructure : IDefineStructure.StructureElement, IHaveAccessibility, IHaveClassModifiers, IHaveIdentifier,
+        IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
 
@@ -441,7 +458,7 @@ public static class Program
             return $"{MyAccessibility} {MyClassModifiers} class {MyIdentifier} {{{Members}}}";
         }
 
-        public StructureElementArray<StructureElementControl<FuncStructure, FieldStructure>> Members = new();
+        public IDefineStructure.StructureElementArray<IDefineStructure.StructureElementControl<FuncStructure, FieldStructure>> Members = new();
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -473,16 +490,16 @@ public static class Program
             return false;
         }
 
-        public EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
-        public StructureElementArray<EnumStructureElement<ClassModifiers>> MyClassModifiers { get; } = new();
+        public IDefineStructure.EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
+        public IDefineStructure.StructureElementArray<IDefineStructure.EnumStructureElement<ClassModifiers>> MyClassModifiers { get; } = new();
         public SingleIdentifierStructure MyIdentifier { get; } = new();
     }
 
-    public class ShardStructure : StructureElementArray<ClassStructure>, ICompileable
+    public class ShardStructure : IDefineStructure.StructureElementArray<ClassStructure>, IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             foreach (var classStructure in this.ElementList)
@@ -505,7 +522,7 @@ public static class Program
 
     public interface IHaveAccessibility
     {
-        public EnumStructureElement<Accessibility> MyAccessibility { get; }
+        public IDefineStructure.EnumStructureElement<Accessibility> MyAccessibility { get; }
     }
 
     public enum MethodModifiers
@@ -534,7 +551,7 @@ public static class Program
 
     public interface IHaveClassModifiers
     {
-        public StructureElementArray<EnumStructureElement<ClassModifiers>> MyClassModifiers { get; }
+        public IDefineStructure.StructureElementArray<IDefineStructure.EnumStructureElement<ClassModifiers>> MyClassModifiers { get; }
     }
 
     public enum TypeKeywords
@@ -572,7 +589,7 @@ public static class Program
         public SingleIdentifierStructure MyIdentifier { get; }
     }
 
-    public class IdentifierStructure : StructureElementList<SingleIdentifierStructure>,ICompileable
+    public class IdentifierStructure : IDefineStructure.StructureElementList<SingleIdentifierStructure>,IDefineStructure.ICompileable
     {
         public SingleIdentifierStructure this[Index index]
         {
@@ -607,7 +624,7 @@ public static class Program
         }
 
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
 
@@ -622,7 +639,7 @@ public static class Program
         }
     }
 
-    public class SingleIdentifierStructure : StructureElement
+    public class SingleIdentifierStructure : IDefineStructure.StructureElement
     {
         public override string ToString()
         {
@@ -721,7 +738,7 @@ public static class Program
         }
     }
 
-    public class FuncParameterStructure : StructureElement, IHaveIdentifier, IHaveTypeReference
+    public class FuncParameterStructure : IDefineStructure.StructureElement, IHaveIdentifier, IHaveTypeReference
     {
         public override string ToString()
         {
@@ -740,14 +757,14 @@ public static class Program
         public TypeReferenceStructure MyTypeReference { get; } = new();
     }
 
-    public class ModifiersList<T> : StructureElementArray<EnumStructureElement<T>> where T : struct, Enum
+    public class ModifiersList<T> : IDefineStructure.StructureElementArray<IDefineStructure.EnumStructureElement<T>> where T : struct, Enum
     {
     }
 
-    public abstract class MemberStructure<T> : StructureElement, IHaveAccessibility, IHaveModifiers<T>,
+    public abstract class MemberStructure<T> : IDefineStructure.StructureElement, IHaveAccessibility, IHaveModifiers<T>,
         IHaveTypeReference, IHaveIdentifier where T : struct, Enum
     {
-        public EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
+        public IDefineStructure.EnumStructureElement<Accessibility> MyAccessibility { get; } = new();
         public ModifiersList<T> MyModifiers { get; } = new();
         public TypeReferenceStructure MyTypeReference { get; } = new();
         public SingleIdentifierStructure MyIdentifier { get; } = new();
@@ -770,15 +787,15 @@ public static class Program
         }
     }
 
-    public abstract class ExpressionStructure : StructureElement, ICompileable
+    public abstract class ExpressionStructure : IDefineStructure.StructureElement, IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
         //? idk what i could put here besides just making it empty yet
-        public abstract bool DoCompileElement(Compiler c);
+        public abstract bool DoCompileElement(IDefineStructure.Compiler c);
     }
 
-    public abstract class AbstractLiteralStructure : StructureElement,ICompileable
+    public abstract class AbstractLiteralStructure : IDefineStructure.StructureElement,IDefineStructure.ICompileable
     {
         public abstract Type[] LiteralTypeOptions { get; }
         public abstract Type ResolvedType { get; }
@@ -791,12 +808,12 @@ public static class Program
         }
 
         public List<Type> SupportedCompilers { get; } = [typeof(ILCompiler)];
-        public abstract bool DoCompileElement(Compiler c);
+        public abstract bool DoCompileElement(IDefineStructure.Compiler c);
     }
 
     public abstract class AbstractIntegerLiteral : AbstractLiteralStructure
     {
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             var il = ilc.IL;
@@ -1217,8 +1234,8 @@ public static class Program
         }
     }
 
-    public class IntegerLiteralStructure : StructureElementControl<DecimalIntegerLiteral, HexadecimalIntegerLiteral,
-        BinaryIntegerLiteral>,ICompileable
+    public class IntegerLiteralStructure : IDefineStructure.StructureElementControl<DecimalIntegerLiteral, HexadecimalIntegerLiteral,
+        BinaryIntegerLiteral>,IDefineStructure.ICompileable
     {
         public Type ResolvedType
         {
@@ -1233,10 +1250,10 @@ public static class Program
         //i think its done?
 
 
-        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
-        public bool DoCompileElement(Compiler c)
+        public List<Type> SupportedCompilers => ((IDefineStructure.ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
-            return ((ICompileable)Element).CompileElement(c);
+            return ((IDefineStructure.ICompileable)Element).CompileElement(c);
         }
     }
 
@@ -1249,7 +1266,7 @@ public static class Program
             return $"\"{StringInterpretation}\"";
         }
 
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             var il = ilc.IL;
@@ -1301,7 +1318,7 @@ public static class Program
             return Value.ToString();
         }
 
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             var il = ilc.IL;
@@ -1329,29 +1346,29 @@ public static class Program
         }
     }
 
-    public class LiteralStructure : StructureElementControl<BooleanLiteralStructure, IntegerLiteralStructure,
-        StringLiteralStructure>, ICompileable
+    public class LiteralStructure : IDefineStructure.StructureElementControl<BooleanLiteralStructure, IntegerLiteralStructure,
+        StringLiteralStructure>, IDefineStructure.ICompileable
     {
-        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
-        public bool DoCompileElement(Compiler c)
+        public List<Type> SupportedCompilers => ((IDefineStructure.ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
-            return ((ICompileable)Element).CompileElement(c);
+            return ((IDefineStructure.ICompileable)Element).CompileElement(c);
         }
     }
 
-    public class ValueStructure : StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
-        IdentifierStructure>
+    public class ValueStructure : IDefineStructure.StructureElementControl<LiteralStructure,FunctionInvokationExpressionStructure,
+        OperatorExpression,IdentifierStructure>
     {
-        public List<Type> SupportedCompilers => ((ICompileable)Element).SupportedCompilers;
-        public bool DoCompileElement(Compiler c)
+        public List<Type> SupportedCompilers => ((IDefineStructure.ICompileable)Element).SupportedCompilers;
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
-            return ((ICompileable)Element).CompileElement(c);
+            return ((IDefineStructure.ICompileable)Element).CompileElement(c);
         }
     }
 
     public class FunctionInvokationExpressionStructure : ExpressionStructure
     {
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             var il = ilc.IL;
@@ -1394,7 +1411,7 @@ public static class Program
             return $"{MethodIdentifier}({Parameters})";
         }
 
-        public StructureElementList<ValueStructure> Parameters = new();
+        public IDefineStructure.StructureElementList<ValueStructure> Parameters = new();
 
         public IdentifierStructure MethodIdentifier = new();
 
@@ -1438,11 +1455,11 @@ public static class Program
 
     public class IfExpression : ExpressionStructure
     {
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             
-            if (IfInsides.Element is ICompileable compileable)
+            if (IfInsides.Element is IDefineStructure.ICompileable compileable)
             {
                 compileable.CompileElement(c);
             }
@@ -1486,7 +1503,7 @@ public static class Program
 
         public ValueStructure IfInsides = new();
         public FuncBodyStructure FuncBody = new();
-        public StructureElementControl<IfExpression, FuncBodyStructure> Else;
+        public IDefineStructure.StructureElementControl<IfExpression, FuncBodyStructure> Else;
 
         protected override bool DoParseElement(SimpleFileReader reader)
         {
@@ -1528,11 +1545,11 @@ public static class Program
     
       public class ForExpression : ExpressionStructure
     {
-        public class ForList : StructureElementList<FuncBodyElement>
+        public class ForList : IDefineStructure.StructureElementList<FuncBodyElement>
         {
             public override char Separator => ';';
         }
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             
@@ -1612,8 +1629,8 @@ public static class Program
 
     public class OperatorExpression : ExpressionStructure
     {
-        public ValueStructure Left = new();
-        public ValueStructure Right = new();
+        public ValueStructure Left;
+        public ValueStructure Right;
         public string Operator = "";
 
         public override string ToString()
@@ -1621,20 +1638,32 @@ public static class Program
             return $"{Left} {Operator} {Right}";
         }
 
+        private static bool T = false;
         protected override bool DoParseElement(SimpleFileReader reader)
         {
+            if (T)
+            {
+                T = false;
+                return false;
+            }
+            Left = new();
             reader.SkipAllWhiteSpace();
+            T = true;
             var l=Left.ParseElement(reader);
+            T = false;
             reader.SkipAllWhiteSpace();
             Operator = reader.ReadUntil(a => char.IsDigit(a) || char.IsLetter(a) || a=='('||a==')'||a=='{'||a=='}'||char.IsWhiteSpace(a));
             reader.SkipAllWhiteSpace();
+            Right = new();
+            T = true;
             var r=Right.ParseElement(reader);
+            T = false;
             var o = Operator.Length > 0;
             reader.SkipAllWhiteSpace();
             return l&&o || r&&o;
         }
 
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             
@@ -1668,6 +1697,35 @@ public static class Program
     }
 
 
+    public class ReturnExpression : ExpressionStructure
+    {
+        public ValueStructure Value;
+        public override string ToString()
+        {
+            return $"return {Value};";
+        }
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            reader.SkipAllWhiteSpace();
+            if (!reader.PeekString("return", true)) return false;
+            Value = new();
+            reader.SkipAllWhiteSpace();
+            Value.ParseElement(reader);
+            reader.SkipAllWhiteSpace();
+            return true;
+        }
+
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
+        {
+            if (c is not ILCompiler ilc) return false;
+            Value.CompileElement(c);
+            //TODO: stack
+            ilc.Pop();
+            ilc.IL.Emit(OpCodes.Ret);
+            return true;
+        }
+    }
     public class VariableDeclaration : ExpressionStructure
     {
         public TypeReferenceStructure VariableType=new();
@@ -1702,7 +1760,7 @@ public static class Program
             return false;
         }
 
-        public override bool DoCompileElement(Compiler c)
+        public override bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
 
@@ -1718,16 +1776,15 @@ public static class Program
             return true;
         }
     }
-    public class FuncBodyElement :
-    StructureElementControl<FuncBodyStructure,VariableDeclaration, IfExpression,ForExpression,FunctionInvokationExpressionStructure,OperatorExpression>
+    public class FuncBodyElement : IDefineStructure.StructureElementControl<FuncBodyStructure,VariableDeclaration,ReturnExpression, IfExpression,ForExpression,FunctionInvokationExpressionStructure,OperatorExpression>
     {
         
     }
-    public class FuncBodyStructure : StructureElementList<FuncBodyElement>, ICompileable
+    public class FuncBodyStructure : IDefineStructure.StructureElementList<FuncBodyElement>, IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             ilc.IL.BeginScope();
@@ -1769,16 +1826,15 @@ public static class Program
                 return false;
             }
 
-            Debugger.Break();
             return false;
         }
     }
 
-    public class FuncStructure : MemberStructure<MethodModifiers>, ICompileable
+    public class FuncStructure : MemberStructure<MethodModifiers>, IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
             MethodAttributes atr = MethodAttributes.PrivateScope;
@@ -1867,7 +1923,7 @@ public static class Program
             return $"{base.ToString()}({Parameters}){{{FuncBody.ToString()}}}";
         }
 
-        public StructureElementList<FuncParameterStructure> Parameters = new();
+        public IDefineStructure.StructureElementList<FuncParameterStructure> Parameters = new();
         public FuncBodyStructure FuncBody = new();
 
         protected override bool DoParseElement(SimpleFileReader reader)
@@ -1917,11 +1973,11 @@ public static class Program
         @static,
     }
 
-    public class FieldStructure : MemberStructure<FieldModifiers>, ICompileable
+    public class FieldStructure : MemberStructure<FieldModifiers>, IDefineStructure.ICompileable
     {
         public List<Type> SupportedCompilers => [typeof(ILCompiler)];
 
-        public bool DoCompileElement(Compiler c)
+        public bool DoCompileElement(IDefineStructure.Compiler c)
         {
             if (c is not ILCompiler ilc) return false;
 
@@ -1944,7 +2000,7 @@ public static class Program
             return false;
         }
 
-        public EnumStructureElement<Accessibility> MyAccessibility { get; }
+        public IDefineStructure.EnumStructureElement<Accessibility> MyAccessibility { get; }
     }
 
 
@@ -2180,6 +2236,23 @@ public static class IDefineStructure
 
     //TODO: make more if i need to lol
     //make more compile too if i do that
+    public class StructureElementControl<T1, T2, T3, T4, T5,T6,T7> : StructureElementControl<T1, T2, T3, T4,T5,T6>
+        where T1 : StructureElement, new()
+        where T2 : StructureElement, new()
+        where T3 : StructureElement, new()
+        where T4 : StructureElement, new()
+        where T5 : StructureElement, new()
+        where T6 : StructureElement, new()
+        where T7 : StructureElement, new()
+    {
+        protected T7 _T7 = new();
+
+        protected override bool DoParseElement(SimpleFileReader reader)
+        {
+            if (base.DoParseElement(reader)) return true;
+            return HandleElement(ref _T7, reader);
+        }
+    }
     public class StructureElementControl<T1, T2, T3, T4, T5,T6> : StructureElementControl<T1, T2, T3, T4,T5>
         where T1 : StructureElement, new()
         where T2 : StructureElement, new()
