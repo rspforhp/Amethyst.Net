@@ -1,14 +1,10 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmethystOld", "AmethystOld\AmethystOld.csproj", "{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILPreview", "ILPreview\ILPreview.csproj", "{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amethyst-Tests", "Amethyst-Tests\Amethyst-Tests.csproj", "{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RuleLexer", "RuleLexer\RuleLexer.csproj", "{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmethystLexer", "AmethystLexer\AmethystLexer.csproj", "{393730A4-CA27-475E-A4E4-B53F7590D8BC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PLSGen", "PLSGen\PLSGen.csproj", "{F60DB097-2FEC-41FD-B724-F34C5CD3A9C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,10 +12,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A11E63AA-1EBF-4899-B9C2-B04E0B0BD565}.Release|Any CPU.Build.0 = Release|Any CPU
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -28,13 +20,9 @@ Global
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{393730A4-CA27-475E-A4E4-B53F7590D8BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{393730A4-CA27-475E-A4E4-B53F7590D8BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{393730A4-CA27-475E-A4E4-B53F7590D8BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{393730A4-CA27-475E-A4E4-B53F7590D8BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F60DB097-2FEC-41FD-B724-F34C5CD3A9C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F60DB097-2FEC-41FD-B724-F34C5CD3A9C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F60DB097-2FEC-41FD-B724-F34C5CD3A9C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F60DB097-2FEC-41FD-B724-F34C5CD3A9C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
