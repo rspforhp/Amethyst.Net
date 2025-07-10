@@ -14,6 +14,7 @@ public struct CharListRule : ILexRule<CharListRule>
     public readonly UnmanagedArray<char> CharArray;
     public bool Reverse;
 
+    public static implicit operator CharListRule(char[] r) => new(r);
     public CharListRule(params char[] ar)
     {
         CharArray= new UnmanagedArray<char>(ar);

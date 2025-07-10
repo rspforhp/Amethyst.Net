@@ -17,7 +17,7 @@ public struct StringLexer
         rule.BeforeRead();
         var r= rule.Read(ref this, out read);
         rule.AfterReadMethod();
-        rule.AfterRead = read;
+            rule.AfterRead = read;
         return r;
     }
 

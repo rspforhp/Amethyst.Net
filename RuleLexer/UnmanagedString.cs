@@ -18,8 +18,18 @@ public struct UnmanagedString
 
     public string Value
     {
-        get => Marshal.PtrToStringAuto(ImmutableString);
-        private init => ImmutableString = Marshal.StringToHGlobalAuto(value);
+        get
+        {
+            if (ImmutableString > 0)
+                return Marshal.PtrToStringAuto(ImmutableString);
+            return "";
+        }
+        private init
+        {
+            if (value.Length > 0)
+                ImmutableString = Marshal.StringToHGlobalAuto(value);
+            else ImmutableString = 0;
+        }
     }
 
     public static implicit operator UnmanagedString(string str) => new(str);
@@ -29,6 +39,7 @@ public struct UnmanagedString
     {
         ImmutableString = immutableString;
     }
+
     public UnmanagedString(string immutableString)
     {
         Value = immutableString;

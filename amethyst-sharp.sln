@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmethystOld", "AmethystOld\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILPreview", "ILPreview\ILPreview.csproj", "{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmethystParserOld", "AmethystParserOld\AmethystParserOld.csproj", "{2DAB2C39-4859-4843-8857-F067679B3C7A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Amethyst-Tests", "Amethyst-Tests\Amethyst-Tests.csproj", "{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RuleLexer", "RuleLexer\RuleLexer.csproj", "{81CBA31A-C6FB-4EBF-8C2F-4AEDD55895B9}"
@@ -26,10 +24,6 @@ Global
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{59C4FB6B-C69F-4A49-A6BC-7082E0491E0F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2DAB2C39-4859-4843-8857-F067679B3C7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2DAB2C39-4859-4843-8857-F067679B3C7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2DAB2C39-4859-4843-8857-F067679B3C7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2DAB2C39-4859-4843-8857-F067679B3C7A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E588E50F-35AA-4DE4-A942-1DB3CB6971D3}.Release|Any CPU.ActiveCfg = Release|Any CPU

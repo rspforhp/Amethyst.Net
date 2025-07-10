@@ -34,7 +34,6 @@ public struct AndRule<T1,T2> : ILexRule<AndRule<T1,T2>> where T1 : unmanaged,ILe
     }
 }
 
-
 public struct OrRule<T1,T2> : ILexRule<OrRule<T1,T2>> where T1 : unmanaged,ILexRule<T1> where T2 : unmanaged,ILexRule<T2>
 {
     public T1 Left;

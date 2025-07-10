@@ -26,7 +26,7 @@ StringLexer r=new("""
                   }
                   """);
 //f.Read(r);
-StringLexer test = new StringLexer("\'a\'");
-CharLiteral l = new();
+StringLexer test = new StringLexer("123");
+IntLiteral l = new();
 var f =test.Read(ref l,out var read);
 Console.WriteLine(read);

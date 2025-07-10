@@ -20,6 +20,11 @@ public struct StringRule : ILexRule<StringRule>
 
     public bool Read(ref StringLexer reader, out string read)
     {
+        if (Value.Value == "")
+        {
+            read = "";
+            return false;
+        }
         if (reader.Exists(Value, true))
         {
             read = Value;
