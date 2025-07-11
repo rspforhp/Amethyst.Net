@@ -1,8 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using PLGSGen;
 
 namespace PLSGen;
-
+[DebuggerDisplay("{DebugView()}")]
 public abstract class LexRule
 {
     public abstract string Name {  get;}
@@ -21,10 +22,17 @@ public abstract class LexRule
     {
     }
 
+    public virtual string DebugView()
+    {
+        return Elements.DebugView();
+    }
+
     public bool Read(ref SimpleStringReader reader)
     {
         bool result = false;
         //TODO:
+
+        result = Elements.Read(ref  reader);
 
         if (result) result = Validate();
         return result;
@@ -37,12 +45,20 @@ public abstract class LexRule
     
     public virtual bool Validate() => true;
 }
-
+//TODO:change rulelist
+[DebuggerDisplay("{DebugView()}")]
 public class RuleList
 {
     public RuleElement? Rule;
     public List<RuleList> List=new();
+    public RuleElement.RuleRelationType Relation;
 
+    public string DebugView()
+    {
+        if (Rule.HasValue) return $"{Rule.Value.DebugView()}";
+        return $"({string.Join("", List.Select(a=>a.DebugView()))})";
+
+    }
     public override string ToString()
     {
         if (Rule.HasValue) return $"{Rule.Value.ToString()}";
@@ -73,8 +89,30 @@ public class RuleList
         scope.AddRange(elem);
         List.Add(scope);
     }
+
+    public bool Read(ref SimpleStringReader reader)
+    {
+        if (Rule.HasValue) return Rule.Value.Read(ref reader);
+        RuleElement.RuleRelationType t = RuleElement.RuleRelationType._;
+        bool result = false;
+        for (int i = 0; i < this.List.Count; i++)
+        {
+            RuleList r = this.List[i];
+            switch (t)
+            {
+                case RuleElement.RuleRelationType._:
+                    break;
+                case RuleElement.RuleRelationType.Or:
+                    break;
+                case RuleElement.RuleRelationType.And:
+                    break;
+            }   
+            t=r.
+        }
+    }
 }
-public struct RuleElement
+[DebuggerDisplay("{DebugView()}")]
+public struct   RuleElement
 {
     public override string ToString()
     {
@@ -109,8 +147,18 @@ public struct RuleElement
         Rule = rule;
         Type = type;
     }
-}
 
+    public string DebugView()
+    {
+        return $"{Rule.DebugView()}{StrType(Type)}";
+    }
+
+    public bool Read(ref SimpleStringReader reader)
+    {
+        throw new NotImplementedException();
+    }
+}
+[DebuggerDisplay("{DebugView()}")]
 public struct SimpleRule
 {
     public string ReadValue { get; internal set; }
@@ -163,24 +211,18 @@ public struct SimpleRule
         {
             case RuleType.RuleName:
                 return $"new SimpleRule({RuleName},true)";
-                break;
             case RuleType.Range:
                 return $"new SimpleRule('{this.CharRange.from}'..'{this.CharRange.toInc}')";
-                break;
             case RuleType.Array:
                 return $"new SimpleRule([\"{string.Join(",", CharArray.Select(a=>$"'{a}'"))}\"])";
-                break;
             case RuleType.String:
                 return $"new SimpleRule(\"{this.String}\")";
-                break;
             case RuleType.RuleList:
                 return $"new SimpleRule({this.ListElement.Value})";
-                break;
             default:
             case RuleType._:
                 return null;
         }
-        return null;
     }
 
     
@@ -217,5 +259,25 @@ public struct SimpleRule
     [Obsolete("Do not use this",true)]
     public SimpleRule()
     {
+    }
+
+    public string DebugView()
+    {
+        switch (this.Type)
+        {
+            case RuleType.RuleName:
+                return $"{RuleName}";
+            case RuleType.Range:
+                return $"'{this.CharRange.from}'..'{this.CharRange.toInc}'";
+            case RuleType.Array:
+                return $"[\"{string.Join(",", CharArray.Select(a=>$"'{a}'"))}\"]";
+            case RuleType.String:
+                return $"\"{this.String}\"";
+            case RuleType.RuleList:
+                return $"{this.ListElement.Value}";
+            default:
+            case RuleType._:
+                return null;
+        }
     }
 }

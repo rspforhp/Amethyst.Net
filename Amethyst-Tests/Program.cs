@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using LexRules;
 using PLGSGen;
 using PLSGen;
 
@@ -8,3 +9,4 @@ Console.WriteLine("test1");
 var t = new BooleanRule();
 SimpleStringReader n = new("true");
 t.Read(ref n);
+Console.WriteLine(t);

@@ -22,6 +22,7 @@ public class PLSGenerator : IIncrementalGenerator
             var ruleName = simpleReader.ReadUntill(s=>s.EndsWith("=")||char.IsWhiteSpace(s, s.Length-1));
             simpleReader.SkipWhitespace();
             if (simpleReader.Read(1) != "=") return $"Syntax error at: {simpleReader.Position} expected '='";
+            b.AppendLine("namespace LexRules{");
 
             b.AppendLine($"public partial class {ruleName} : LexRule {{");
             var ruleList = new RuleList();
@@ -90,6 +91,7 @@ public class PLSGenerator : IIncrementalGenerator
             b.AppendLine("}");
 
             //Debugger.Break();
+            b.AppendLine("}");
             b.AppendLine("}");
 
             break;
