@@ -1,1 +1,27 @@
 BooleanRule = "true" | "false"   ;
+BinaryDigit = "0" | "1";
+DecoratedBinaryDigit="_"* & BinaryDigit;
+BinaryIntegerLiteral=("0b"|"0B") & DecoratedBinaryDigit+ & IntegerTypeSuffix?;
+IntegerTypeSuffix=  "UL" | "Ul" | "uL" | "ul" | "LU" | "Lu" | "lU" | "lu" | "U" | "u" | "L" | "l" ;
+HexDigit='0'..'9' | 'A'..'F' | 'a'..'f';
+DecoratedHexDigit="_"* & HexDigit;
+HexadecimalIntegerLiteral=("0x"|"0X")&DecoratedHexDigit+ & IntegerTypeSuffix?;
+DecimalDigit='0'..'9';
+DecoratedDecimalDigit="_"* & DecimalDigit;
+DecimalIntegerLiteral=DecimalDigit & DecoratedDecimalDigit* & IntegerTypeSuffix?;
+IntegerLiteral=HexadecimalIntegerLiteral|BinaryIntegerLiteral|DecimalIntegerLiteral;
+RealTypeSuffix="F"|"f"|"D"|"d"|"M"|"m";
+Sign="-"|"+";
+ExponentPart=("e"|"E") & Sign? & DecimalDigit&DecoratedDecimalDigit*;
+RealLiteral= 
+ (DecimalDigit&DecoratedDecimalDigit*&ExponentPart&RealTypeSuffix?) |
+ (DecimalDigit&DecoratedDecimalDigit*&RealTypeSuffix)   |
+ (DecimalDigit&DecoratedDecimalDigit*&"."&DecimalDigit&DecoratedDecimalDigit*&ExponentPart?&RealTypeSuffix?) | 
+ ("."&DecimalDigit&DecoratedDecimalDigit*&ExponentPart?&RealTypeSuffix?)    ;
+SingleCharacter=~['\\\u000D\u000A\u0085\u2028\u2029];
+HexadecimalEscapeSequence="\\x"& HexDigit& HexDigit?& HexDigit?& HexDigit?;
+SimpleEscapeSequence="'" | "\\"" | "\\\\" | "\\0" | "\\a" | "\\b" |"\\f" | "\\n" | "\\r" | "\\t" | "\\v";
+UnicodeEscapeSequence= "\\u"& HexDigit& HexDigit &HexDigit& HexDigit
+    | "\\U" &HexDigit& HexDigit& HexDigit& HexDigit&HexDigit& HexDigit &HexDigit& HexDigit;
+Character=SimpleEscapeSequence|HexadecimalEscapeSequence|SingleCharacter|UnicodeEscapeSequence;
+CharacterLiteral="'" &Character &"'";
