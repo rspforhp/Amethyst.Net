@@ -143,3 +143,32 @@ public partial class RealLiteral : IParsableValue<double>
         return double.Parse(from.Replace("_",""), NumberStyles.Float);
     }
 }
+public partial class CharacterLiteral : IParsableValue<char>
+{
+    public Optional<char> Value { get; set; }
+    public override bool Validate()
+    {
+        Value = Parse(this.ReadValue);
+        return Value.HasValue;
+    }
+
+    public static Optional<char> Parse(string from)
+    {
+        return from.Substring(1,from.Length-2)[0];
+    }
+}
+public partial class StringLiteral : IParsableValue<string>
+{
+    public Optional<string> Value { get; set; }
+    public override bool Validate()
+    {
+        Value = Parse(this.ReadValue);
+        return Value.HasValue;
+    }
+
+    public static Optional<string> Parse(string from)
+    {
+        //TODO: escaping and stuff
+        return from.Substring(1,from.Length-2);
+    }
+}

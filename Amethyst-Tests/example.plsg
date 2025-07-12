@@ -1,3 +1,8 @@
+
+RegularStringLiteral
+    = "\"" & RegularStringLiteralCharacter* & "\""
+    ;
+
 BooleanRule = "true" | "false"   ;
 BinaryDigit = "0" | "1";
 DecoratedBinaryDigit="_"* & BinaryDigit;
@@ -20,8 +25,43 @@ RealLiteral=
  ("."&DecimalDigit&DecoratedDecimalDigit*&ExponentPart?&RealTypeSuffix?)    ;
 SingleCharacter=~['\\\u000D\u000A\u0085\u2028\u2029];
 HexadecimalEscapeSequence="\\x"& HexDigit& HexDigit?& HexDigit?& HexDigit?;
-SimpleEscapeSequence="'" | "\\"" | "\\\\" | "\\0" | "\\a" | "\\b" |"\\f" | "\\n" | "\\r" | "\\t" | "\\v";
+SimpleEscapeSequence="'" | "\\\"" | "\\\\" | "\\0" | "\\a" | "\\b" |"\\f" | "\\n" | "\\r" | "\\t" | "\\v";
 UnicodeEscapeSequence= "\\u"& HexDigit& HexDigit &HexDigit& HexDigit
     | "\\U" &HexDigit& HexDigit& HexDigit& HexDigit&HexDigit& HexDigit &HexDigit& HexDigit;
 Character=SimpleEscapeSequence|HexadecimalEscapeSequence|SingleCharacter|UnicodeEscapeSequence;
 CharacterLiteral="'" &Character &"'";
+
+
+StringLiteral=RegularStringLiteral| VerbatimStringLiteral;
+
+
+RegularStringLiteralCharacter
+    = SingleRegularStringLiteralCharacter
+    | SimpleEscapeSequence
+    | HexadecimalEscapeSequence
+    | UnicodeEscapeSequence
+    ;
+
+SingleRegularStringLiteralCharacter
+    = ~["\\\u000D\u000A\u0085\u2028\u2029]
+    ;
+
+VerbatimStringLiteral
+    = "@\""& VerbatimStringLiteralCharacter* & "\""
+    ;
+
+VerbatimStringLiteralCharacter
+    = SingleVerbatimStringLiteralCharacter
+    | QuoteEscapeSequence
+    ;
+
+SingleVerbatimStringLiteralCharacter
+    = ~["]     // anything but quotation mark (U+0022)
+    ;
+
+QuoteEscapeSequence
+    = "\"\""
+    ;
+    
+    NullLiteral="null";
+    

@@ -25,11 +25,6 @@
       <AdditionalFiles Include="example.plsg" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Compile Remove="LexRules.cs" />
-      <None Include="LexRules.cs" />
-    </ItemGroup>
-
 
 
 </Project>

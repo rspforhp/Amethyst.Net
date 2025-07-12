@@ -27,7 +27,7 @@ public class PLSGenerator : IIncrementalGenerator
                 
                 var word = simpleReader.ReadUntill(str =>
                 {
-                    var s = UnEscape(str);
+                    var s =str;
                     var endsWith = s.EndsWith("\"");
                     int amount = 0;
                     for (int i = s.Length - 2; i >= 0; i--)
@@ -121,6 +121,13 @@ public class PLSGenerator : IIncrementalGenerator
             }
 
             simpleReader.SkipWhitespace();
+            if (simpleReader.Exists("//", true))
+            {
+                var c=simpleReader.ReadUntill(a => a.EndsWith("\r") || a.EndsWith("\n"));
+                if (simpleReader.Exists("\r\n", true)) ;
+                else if (simpleReader.Exists("\n", true)) ;
+                simpleReader.SkipWhitespace();
+            }
 
             if (simpleReader.Exists("|", true))
             {
