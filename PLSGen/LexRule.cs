@@ -260,7 +260,7 @@ public struct SimpleRule
                     foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
                     {
                         var types = assembly.GetTypes();
-                        t = types.ToList().Find(a => a.Namespace == "LexRules" && a.Name == tempRulename);
+                        t = types.ToList().Find(a => typeof(LexRule).IsAssignableFrom(a) && a.Name == tempRulename);
                         if (t != null) break;
                     }
                     if (t == null) throw new TypeLoadException();

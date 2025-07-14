@@ -1,6 +1,7 @@
 
 using System.Diagnostics;
 using System.Text;
+using PLGSGen.Rework;
 
 namespace PLGSGen;
 
@@ -64,7 +65,25 @@ public struct SimpleStringReader
             Position += (uint)s.Length;
         return true;
     }
-
+    public bool Exists(char toRead, bool adjustIfTrue)
+    {
+        var l = 1;
+        var s = Peek((uint)l)[0];
+        if (s!=toRead) return false;
+        if (adjustIfTrue)
+            Position += 1;
+        return true;
+    }
+    public bool Exists(Range toRead, bool adjustIfTrue,out char ReadChar)
+    {
+        var l = 1;
+        var s = Peek((uint)l)[0];
+        ReadChar = s;
+        if (!toRead.InRangeInclusive(s)) return false;
+        if (adjustIfTrue)
+            Position += 1;
+        return true;
+    }
     public SimpleStringReader()
     {
     }

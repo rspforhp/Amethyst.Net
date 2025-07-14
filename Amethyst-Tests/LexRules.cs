@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Microsoft.CodeAnalysis;
 
-namespace LexRules;
+namespace LexRules.CSharpLiterals;
 
 public interface IParsableValue<T>
 {

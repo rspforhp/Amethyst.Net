@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdditionalFiles Include="example.plsg" />
+      <AdditionalFiles Include="CSharpLiterals.plsg" />
     </ItemGroup>
 
 

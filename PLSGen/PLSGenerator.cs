@@ -208,13 +208,13 @@ public class PLSGenerator : IIncrementalGenerator
     {
         return ToLiteral(chars);
     }
-    public static string HandleFile(string content)
+    public static string HandleFile(string content,string name)
     {
         if (content.Length == 0) return "";
         StringBuilder b = new();
         b.AppendLine($"using PLSGen;");
         b.AppendLine("using System.Diagnostics;");
-        b.AppendLine("namespace LexRules{");
+        b.AppendLine($"namespace LexRules.{name}{{");
         SimpleStringReader simpleReader = new(content);
         while (true)
         {
@@ -259,7 +259,7 @@ public class PLSGenerator : IIncrementalGenerator
         {
             if (nameAndContent.content.Length == 0) return;
             var content = nameAndContent.content;
-            string builder = HandleFile(content);
+            string builder = HandleFile(content,nameAndContent.name);
             spc.AddSource($"PLSG.{nameAndContent.name}.g", builder);
         });
     }
