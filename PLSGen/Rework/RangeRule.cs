@@ -20,7 +20,10 @@ public struct RangeRule : ILexRule, IProvideClone<RangeRule>, IReversible<RangeR
     public bool _Lex(ref SimpleStringReader reader, out string readText)
     {
         bool result = false;
-        result = reader.Exists(CharRange, true,out var c);
+        char c = '\0';
+        if(!Reverse)
+            result = reader.Exists(CharRange, true,out  c);
+        else result = reader.ExistsReverse(CharRange, true,out  c);
         readText = c.ToString();
         return result;
     }

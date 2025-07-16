@@ -74,12 +74,42 @@ public struct SimpleStringReader
             Position += 1;
         return true;
     }
+    public bool Exists(char[] toRead, bool adjustIfTrue,out char ReadChar)
+    {
+        var l = 1;
+        var s = Peek((uint)l)[0];
+        ReadChar = s;
+        if (!toRead.Contains(s)) return false;
+        if (adjustIfTrue)
+            Position += 1;
+        return true;
+    }
+    public bool ExistsReverse(char[] toRead, bool adjustIfTrue,out char ReadChar)
+    {
+        var l = 1;
+        var s = Peek((uint)l)[0];
+        ReadChar = s;
+        if (toRead.Contains(s)) return false;
+        if (adjustIfTrue)
+            Position += 1;
+        return true;
+    }
     public bool Exists(Range toRead, bool adjustIfTrue,out char ReadChar)
     {
         var l = 1;
         var s = Peek((uint)l)[0];
         ReadChar = s;
         if (!toRead.InRangeInclusive(s)) return false;
+        if (adjustIfTrue)
+            Position += 1;
+        return true;
+    }
+    public bool ExistsReverse(Range toRead, bool adjustIfTrue,out char ReadChar)
+    {
+        var l = 1;
+        var s = Peek((uint)l)[0];
+        ReadChar = s;
+        if (toRead.InRangeInclusive(s)) return false;
         if (adjustIfTrue)
             Position += 1;
         return true;
