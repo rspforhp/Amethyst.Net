@@ -21,10 +21,6 @@
       <ProjectReference Include="..\PLSGen\PLSGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     </ItemGroup>
 
-    <ItemGroup>
-      <AdditionalFiles Include="CSharpLiterals.plsg" />
-    </ItemGroup>
-
 
 
 </Project>

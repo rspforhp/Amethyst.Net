@@ -1,21 +1,19 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
-using LexRules;
 using LexRules.CSharpLiterals;
 using PLGSGen;
 using PLGSGen.Rework;
-using PLSGen;
 
-CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;//TODO: change stuff everywhere to invariant
+public static partial class Program
+{
+    public static void Main(string[] args)
+    {
+        CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;//TODO: change stuff everywhere to invariant
+        //var handleFile = PLSGenerator.HandleFile(File.ReadAllText(@"C:\Janet\Janet\CS\amethyst-sharp\Amethyst-Tests\New_CSharpLiterals.plsg"),"test");
+        BooleanRule r = new();
+        var re = new SimpleStringReader("false");
+        r.Lex(ref re, out string text);
+    }
+}
 
-SimpleStringReader reader = new SimpleStringReader("34134a");
-var testRule = new ListRule(new RangeRule('0','9'));
-var lex = testRule.Lex(ref reader,out var s);
-Console.WriteLine(testRule);
-/*
-Console.WriteLine("test1");
-var t = new StringLiteral()  ;
-SimpleStringReader n = new("\"test of a string  literal :3\"");
-var suc=t.Read(ref n);
-Console.WriteLine(t.ReadValue);
-*/

@@ -19,6 +19,7 @@ public struct SimpleStringReader
     public string Peek(uint length)
     {
         var l=Math.Min(Position+length, (uint)UnderlyingString.Length);
+        if (Position > l) return string.Empty;
         return UnderlyingString[(int)Position..((int)l)];
     }
 
@@ -40,7 +41,9 @@ public struct SimpleStringReader
             {
                 resultingString = curRead;
                 Position++;
-                curRead += Peek(1);
+                var t = Peek(1);
+                if (t == string.Empty) break;
+                curRead += t;
             } while (!validator(curRead) || curRead==resultingString);
         return resultingString;
     }
@@ -121,5 +124,123 @@ public struct SimpleStringReader
     public SimpleStringReader(string underlyingString)
     {
         UnderlyingString = underlyingString;
+    }
+
+    public string WriteQuotedString()
+    {
+        StringBuilder builder = new();
+
+        while (true)
+        {
+            var s = this.Read(1);
+            if (s == string.Empty) break;
+            char read = s[0];
+            switch (read)
+            {
+                case '\'':
+                    builder.Append("\\\'");
+                    break;
+                case '\"':
+                    builder.Append("\\\"");
+                    break;
+                case '\\':
+                    builder.Append("\\\\");
+                    break;
+                case '\0':
+                    builder.Append("\\0");
+                    break;
+                case '\a':
+                    builder.Append("\\a");
+                    break;
+                case '\b':
+                    builder.Append("\\b");
+                    break;
+                case '\f':
+                    builder.Append("\\f");
+                    break;
+                case '\n':
+                    builder.Append("\\n");
+                    break;
+                case '\r':
+                    builder.Append("\\r");
+                    break;
+                case '\t':
+                    builder.Append("\\t");
+                    break;
+                case '\v':
+                    builder.Append("\\v");
+                    break;
+                default:
+                    builder.Append(read);
+                    break;
+            }
+        }
+
+        return builder.ToString();
+    }
+    public string ReadQuotedString()
+    {
+        if (!Exists("\"", true)) return null;
+        StringBuilder builder = new();
+
+        while (true)
+        {
+            char read = this.Read(1)[0];
+            if (read == '\\')
+            {
+                char escapedChar = Read(1)[0];
+                switch (escapedChar)
+                {
+                    case 'u':
+                        break;
+                    case 'U':
+                        break;
+                    case 'x':
+                        break;
+                    case '\'':
+                        builder.Append('\'');
+                        break;
+                    case '\"':
+                        builder.Append('\"');
+                        break;
+                    case '\\':
+                        builder.Append('\\');
+                        break;
+                    case '0':
+                        builder.Append('\0');
+                        break;
+                    case 'a':
+                        builder.Append('\a');
+                        break;
+                    case 'b':
+                        builder.Append('\b');
+                        break;
+                    case 'f':
+                        builder.Append('\f');
+                        break;
+                    case 'n':
+                        builder.Append('\n');
+                        break;
+                    case 'r':
+                        builder.Append('\r');
+                        break;
+                    case 't':
+                        builder.Append('\t');
+                        break;
+                    case 'v':
+                        builder.Append('\v');
+                        break;
+                    default:
+                        throw new Exception("What are you trying to escape?");
+                }
+            }
+            else
+            {
+                if (read == '\"') break;
+                builder.Append(read);
+            }
+        }
+
+        return builder.ToString();
     }
 }

@@ -10,7 +10,10 @@ public struct SwitchRule : ILexRule,IProvideClone<SwitchRule>
         var t = string.Join(", ", this.Rules.Select(a => a.DebuggerDisplay()));
         return $"switch({t})";
     }
-    
+    public override int GetHashCode()
+    {
+        return string.Join("",Rules.Select(a=>a.GetHashCode())).GetHashCode();
+    }
     public bool Optional { get; set; }
     public string Label { get; set; }
     public string LexedText { get; set; }
@@ -46,6 +49,13 @@ public struct SwitchRule : ILexRule,IProvideClone<SwitchRule>
         CloningProp = () => new SwitchRule(rules);
     }
 
+  
+    public SwitchRule(params IReadOnlyList<ILexRuleConvertible> rules)
+    {
+        Rules = rules.Select(a=>a.GetRule()).ToList();
+        var rule = Rules;
+        CloningProp = () => new SwitchRule(rule);
+    }
     public bool Validate()
     {
         return true;

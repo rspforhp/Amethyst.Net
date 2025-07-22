@@ -1,9 +1,55 @@
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.CodeAnalysis;
-
+using PLGSGen;
+using PLGSGen.Rework;
 namespace LexRules.CSharpLiterals;
 
+public interface ILexRuleWithBase : ILexRule
+{
+    public ILexRule Base { get; set; }
+    string ILexRule.DebuggerDisplay()
+    {
+        return Base.DebuggerDisplay();
+    }
+
+    bool ILexRule._Lex(ref SimpleStringReader reader, out string readText)
+    {
+        return Base.Lex(ref reader, out readText);
+    }
+}
+public struct BooleanRule : ILexRuleWithBase
+{
+    public bool Optional { get; set; }
+    public string Label { get; set; }
+    public string LexedText { get; set; }
+    public uint LexedPosition { get; set; }
+    public bool HasLexed { get; set; }
+    public Func<object> CloningProp { get; set; }
+    public ILexRule Base { get; set; }
+    
+    
+    public bool? Value;
+    public BooleanRule()
+    {
+        Base = new SwitchRule("true","false");
+        CloningProp = () => new BooleanRule();
+    }
+    public bool Validate()
+    {
+        Value = this.LexedText switch
+        {
+            "true" => true,
+            "false" => false,
+            _ => null
+        };
+        return Value.HasValue;
+    }
+
+}
+
+
+/*
 public interface IParsableValue<T>
 {
     public Optional<T> Value { get; set; }
@@ -171,4 +217,4 @@ public partial class StringLiteral : IParsableValue<string>
         //TODO: escaping and stuff
         return from.Substring(1,from.Length-2);
     }
-}
+}*/

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 
 namespace PLGSGen.Rework;
@@ -5,6 +6,12 @@ namespace PLGSGen.Rework;
 [DebuggerDisplay("{DebuggerDisplay()}")]
 public struct CharArrayRule : ILexRule, IProvideClone<CharArrayRule>, IReversible<CharArrayRule>
 {
+    public override int GetHashCode()
+    {
+        return string.Join("",CharArray).GetHashCode();
+    }
+    
+    
     public string DebuggerDisplay()
     {
         return $"array(\"{string.Join("",CharArray)}\")";

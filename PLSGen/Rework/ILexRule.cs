@@ -10,8 +10,28 @@ public interface ILexRule : IProvideClone
     public bool HasLexed { get; set; }
     abstract bool _Lex(ref SimpleStringReader reader,out string readText);
     public bool Validate();
-}
 
+ 
+}
+public struct ILexRuleConvertible
+{
+    private ILexRule Rule;
+    private string StringRule;
+
+    public static implicit operator ILexRuleConvertible(string str) => new() { StringRule = str };
+    public static implicit operator ILexRuleConvertible(StringRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(CharArrayRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(EachRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(ListRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(RangeRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(RuleNameRule str) => new() { Rule = str };
+    public static implicit operator ILexRuleConvertible(SwitchRule str) => new() { Rule = str };
+    public ILexRule GetRule()
+    {
+        if (StringRule != null) return new StringRule(StringRule);
+        return Rule;
+    }
+}
 
 public static class ILexRuleExtension
 {
@@ -20,6 +40,20 @@ public static class ILexRuleExtension
         return (ILexRule)c.CloningProp();
     }
 
+    public static string GenerateRuleTree(this ILexRule r)
+    {
+        
+        switch (r)
+        {
+            case StringRule s:
+                return $"new StringRule(\"{new SimpleStringReader(s.ToRead).WriteQuotedString()}\")";
+                break;
+            case SwitchRule sw:
+                return $"new SwitchRule({string.Join(", ",sw.Rules.Select(a=>a.GenerateRuleTree()))})";
+                break;
+        }
+        return "";
+    }
  
     
   

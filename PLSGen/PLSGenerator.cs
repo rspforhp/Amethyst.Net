@@ -4,244 +4,143 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using PLGSGen;
+using PLGSGen.Rework;
 
 namespace PLSGen;
-
+//TODO: its unfinished, and idk if i will finish it lol, the source gen part atleast
 [Generator()]
 public class PLSGenerator : IIncrementalGenerator
 {
     //Syntaxis is basically from antlr lol
     //but much and i mean, much more simplified imo
-    public static List<RuleElement> GetRuleList(ref SimpleStringReader simpleReader)
+    public static List<(string name, ILexRule rule)> GetRuleList(ref SimpleStringReader simpleReader)
     {
-        var ruleList = new List<RuleElement>();
-        while (true)
+        List<(string name, ILexRule rule)> l = new();
+        bool failed = false;
+        while (!failed)
         {
-            SimpleRule? parsedRule = null;
-            bool negate = false;
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("~", true)) negate = true;
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("\"", true))
+            var rule=GetSingleRule(ref simpleReader, out failed);
+            if(!failed)
+                l.Add(rule);
+        }
+        return l;
+    }
+
+    public static string ReadQuotedString(ref SimpleStringReader reader)
+    {
+        return reader.ReadQuotedString();
+    }
+    public static ILexRule GetRuleElement(ref SimpleStringReader reader, out bool failed)
+    {
+        if (reader.Exists("\"",false))
+        {
+            failed = false;
+            return new StringRule(reader.ReadQuotedString());
+        }
+        
+        
+        var ruleC = reader.ReadUntill(a => a.EndsWith("("));
+        switch (ruleC)
+        {
+            case "switch":
             {
-                
-                var word = simpleReader.ReadUntill(str =>
+                reader.Position++;
+                List<ILexRule> rules = new(6);
+                ILexRule r = null;
+                bool singleFailed = false;
+                while (!singleFailed)
                 {
-                    var s =str;
-                    var endsWith = s.EndsWith("\"");
-                    int amount = 0;
-                    for (int i = s.Length - 2; i >= 0; i--)
+                    reader.SkipWhitespace();
+                    r = GetRuleElement(ref reader, out singleFailed);
+                    if (!singleFailed)
                     {
-                        char c = s[i];
-                        if (c == '\\') amount++;
+                        rules.Add(r);
+                    }
+                    reader.SkipWhitespace();
+                    if (!reader.Exists(",", true))
+                    {
+                        reader.SkipWhitespace();
+                        if (!reader.Exists(")", true))
+                        {
+                            throw new Exception("Unexpected end");
+                        }
                         else break;
                     }
-                    return endsWith&&(amount%2==0);
-                });
-                simpleReader.Position++;
-                if (word.Length > short.MaxValue)
-                {
-                    throw new NotSupportedException("String is too big, perhaps an error!");
                 }
-
-                word = UnEscape(word);
-                parsedRule = new SimpleRule(word);
-            }
-            else
-            {
-                char curC = simpleReader.Peek(1)[0];
-                if (char.IsLetter(curC))
-                {
-                    var readRuleName = simpleReader.ReadUntill(str => str.Any(c => !char.IsLetter(c)));
-                    parsedRule = new SimpleRule(readRuleName, true);
-                }
-                else if (curC == '(')
-                {
-                    simpleReader.Position++;
-                    var newScope = GetRuleList(ref simpleReader);
-                    parsedRule = new SimpleRule(newScope);
-                }
-                else if (curC == '\'')
-                {
-                    simpleReader.Position++;
-                    char from = '\0';
-                    from = simpleReader.Read(1)[0];
-                    if (simpleReader.Exists("'", true))
-                    {
-                        simpleReader.SkipWhitespace();
-                        if (simpleReader.Exists("..", true))
-                        {
-                            simpleReader.SkipWhitespace();
-                            char to = '\0';
-                            if (simpleReader.Exists("'", true))
-                            {
-                                to = simpleReader.Read(1)[0];
-                                if (simpleReader.Exists("'", true))
-                                {
-                                    parsedRule = new SimpleRule(from, to);
-                                }
-                            }
-                        }
-                    }
-                }
-                else if (curC == '[')
-                {
-                    simpleReader.Position++;
-                    string chars = simpleReader.ReadUntill(a => a.EndsWith("]") && !a.EndsWith("\\]"));
-                    if (simpleReader.Exists("]", true))
-                    {
-                        chars=UnEscape(chars);
-                        var ar = chars.ToCharArray();
-                        parsedRule = new SimpleRule(ar);
-                    }
-                }
-
-                if (parsedRule == null) Debugger.Break();
-            }
-
-            RuleElement.RuleRelationType type = RuleElement.RuleRelationType._;
-            bool breakAfter = false;
-
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("*", true))
-            {
-                parsedRule = new SimpleRule(parsedRule.Value).MakeOptional();
-            }
-
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("+", true))
-            {
-                parsedRule = new SimpleRule(parsedRule.Value);
-            }
-
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("?", true))
-            {
-                parsedRule = parsedRule.Value.MakeOptional();
-            }
-
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Exists("//", true))
-            {
-                var c=simpleReader.ReadUntill(a => a.EndsWith("\r") || a.EndsWith("\n"));
-                if (simpleReader.Exists("\r\n", true)) ;
-                else if (simpleReader.Exists("\n", true)) ;
-                simpleReader.SkipWhitespace();
-            }
-
-            if (simpleReader.Exists("|", true))
-            {
-                type = RuleElement.RuleRelationType.Or;
-            }
-            else if (simpleReader.Exists("&", true))
-            {
-                type = RuleElement.RuleRelationType.And;
-            }
-            else if (simpleReader.Exists(";", true))
-            {
-                breakAfter = true;
-            }
-            else if (simpleReader.Exists(")", true))
-            {
-                breakAfter = true;
-            }
-            else throw new NotSupportedException("WHAT?");
-
-            if (parsedRule.HasValue)
-            {
-                if (negate)
-                    parsedRule = parsedRule.Value.NegateMe();
-                ruleList.Add(new RuleElement(parsedRule.Value, type));
-            }
-            else
-            {
-                Debugger.Break();
-                break;
-            }
-
-            if (breakAfter)
-            {
-                // Debugger.Break();
-                break;
+                failed = false;
+                return new SwitchRule(rules);
             }
         }
 
-        return ruleList;
+
+        failed = true;
+        return null;
     }
-    private static string ToLiteral(string input) {
-        StringBuilder literal = new StringBuilder(input.Length + 2);
-        foreach (var c in input) {
-            switch (c) {
-                case '\"': literal.Append("\\\""); break;
-                case '\\': literal.Append(@"\\"); break;
-                case '\0': literal.Append(@"\0"); break;
-                case '\a': literal.Append(@"\a"); break;
-                case '\b': literal.Append(@"\b"); break;
-                case '\f': literal.Append(@"\f"); break;
-                case '\n': literal.Append(@"\n"); break;
-                case '\r': literal.Append(@"\r"); break;
-                case '\t': literal.Append(@"\t"); break;
-                case '\v': literal.Append(@"\v"); break;
-                default:
-                    // ASCII printable character
-                    if (c >= 0x20 && c <= 0x7e) {
-                        literal.Append(c);
-                        // As UTF16 escaped character
-                    } else {
-                        literal.Append(@"\u");
-                        literal.Append(((int)c).ToString("x4"));
-                    }
-                    break;
-            }
+    public static (string name, ILexRule rule) GetSingleRule(ref SimpleStringReader reader,out bool failed)
+    {
+        string n = "";
+        ILexRule r = null;
+        reader.SkipWhitespace();
+        n = reader.ReadUntill(c => c.EndsWith("="));
+        if (n.Length == 0 || n.Length > 256)
+        {
+            failed = true;
+            return default;
         }
-        return literal.ToString();
-    }
-    public static string UnEscape(string chars)
-    {
-        Regex regex = new Regex(@"\\U([0-9A-F]{4})", RegexOptions.IgnoreCase);
-        chars = regex.Replace (chars, match => ((char)int.Parse (match.Groups[1].Value,
-            NumberStyles.HexNumber)).ToString ());
-        chars = Regex.Unescape(chars);
-        return chars;
-    }
-    public static string Escape(string chars)
-    {
-        return ToLiteral(chars);
+        n = n.TrimEnd();
+        reader.SkipWhitespace();
+        reader.Position++;
+        reader.SkipWhitespace();
+        r = GetRuleElement(ref reader, out failed);
+        reader.SkipWhitespace();
+        if (!reader.Exists(";", true)) failed = true;
+        return (n, r);
     }
     public static string HandleFile(string content,string name)
     {
         if (content.Length == 0) return "";
         StringBuilder b = new();
+        SimpleStringReader simpleReader = new(content);
+        var ruleList = GetRuleList(ref simpleReader);
+      
         b.AppendLine($"using PLSGen;");
+        b.AppendLine($"using PLGSGen;");
+        b.AppendLine($"using PLGSGen.Rework;");
         b.AppendLine("using System.Diagnostics;");
         b.AppendLine($"namespace LexRules.{name}{{");
-        SimpleStringReader simpleReader = new(content);
-        while (true)
+       
+        foreach (var rule in ruleList)
         {
-            simpleReader.SkipWhitespace();
-            var ruleName =
-                simpleReader.ReadUntill(s => s.EndsWith("=") || s.Length == 0 || char.IsWhiteSpace(s, s.Length - 1));
-            if (ruleName.Length == 0) break;
-            simpleReader.SkipWhitespace();
-            if (simpleReader.Read(1) != "=") return $"Syntax error at: {simpleReader.Position} expected '='";
-
-            b.AppendLine("[DebuggerDisplay(\"{DebugView()}\")]");
-            b.AppendLine($"public partial class {ruleName} : LexRule {{");
-            var ruleList = GetRuleList(ref simpleReader);
-
-            b.AppendLine($"public override string Name=>\"{ruleName}\";");
-            b.AppendLine($"public static readonly SimpleRule StaticRule={(new SimpleRule(ruleList).ToString())};");
-            b.AppendLine($"public {ruleName}():base() {{");
-            b.Append($"Elements=");
-            b.Append($"{ruleName}.StaticRule");
-            b.AppendLine($";");
-
-            b.AppendLine("}");
-
-            //Debugger.Break();
-            b.AppendLine("}");
+            b.AppendLine("[DebuggerDisplay(\"{DebuggerDisplay()}\")]");
+            b.AppendLine($"public partial struct {rule.name} : ILexRule {{");
+            b.Append($$"""
+                     public Func<object> CloningProp { get; set; }
+                      public string DebuggerDisplay()
+                      {
+                          return UnderlyingRule.DebuggerDisplay();
+                      }
+                     
+                      public bool Optional { get; set; }
+                      public string Label { get; set; }
+                      public string LexedText { get; set; }
+                      public uint LexedPosition { get; set; }
+                      public bool HasLexed { get; set; }
+                      public bool _Lex(ref SimpleStringReader reader, out string readText)
+                      {
+                          return UnderlyingRule.Lex(ref reader,out readText);
+                      }
+                      
+                      public ILexRule UnderlyingRule;
+                      public {{rule.name}}()
+                      {
+                            UnderlyingRule={{rule.rule.GenerateRuleTree()}};    
+                            CloningProp=()=>new {{rule.name}}();
+                      }
+                      
+                   
+                     }
+                     """);
         }
-
         b.AppendLine("}");
         return b.ToString();
     }

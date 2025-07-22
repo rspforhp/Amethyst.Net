@@ -1,9 +1,20 @@
 using System.Diagnostics;
 
 namespace PLGSGen.Rework;
-[DebuggerDisplay("{DebuggerDisplay}")]
+
+public static class StringRule_Ext
+{
+    public static StringRule Rule(this string str) => new(str);
+    public static StringRule StrRule(this object str) => new(str.ToString());
+}
+[DebuggerDisplay("{DebuggerDisplay()}")]
 public struct StringRule : ILexRule, IProvideClone<StringRule>
 {
+    public override int GetHashCode()
+    {
+        return ToRead.GetHashCode();
+    }
+
     public string DebuggerDisplay()
     {
         return $"\"{ToRead}\"";

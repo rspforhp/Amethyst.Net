@@ -11,7 +11,12 @@ public struct RangeRule : ILexRule, IProvideClone<RangeRule>, IReversible<RangeR
         char e = (Char)CharRange.End.Value;
         return $"(\'{f}\'..\'{e}\')";
     }
-
+    public override int GetHashCode()
+    {
+        char f =(char) CharRange.Start.Value;
+        char e = (Char)CharRange.End.Value;
+        return $"{f}..{e}".GetHashCode();
+    }
     public bool Optional { get; set; }
     public string Label { get; set; }
     public string LexedText { get; set; }

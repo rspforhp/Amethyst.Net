@@ -9,7 +9,10 @@ public struct ListRule : ILexRule, IProvideClone<ListRule>, IReversible<ListRule
     {
         return $"array({Element.DebuggerDisplay()})";
     }
-
+    public override int GetHashCode()
+    {
+        return $"array {Element.GetHashCode()}".GetHashCode();
+    }
     public bool Optional { get; set; }
     public string Label { get; set; }
     public string LexedText { get; set; }

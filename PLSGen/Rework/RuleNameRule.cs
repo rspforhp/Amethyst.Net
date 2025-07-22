@@ -10,7 +10,11 @@ public struct RuleNameRule : ILexRule, IProvideClone<RuleNameRule>, IReversible<
     {
         return RuleName;
     }
-
+    public override int GetHashCode()
+    {
+        GetRule();
+        return FoundRule!=null?FoundRule.GetHashCode():0;
+    }
     public bool Optional { get; set; }
     public string Label { get; set; }
     public string LexedText { get; set; }

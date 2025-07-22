@@ -5,6 +5,10 @@ namespace PLGSGen.Rework;
 [DebuggerDisplay("{DebuggerDisplay()}")]
 public struct EachRule : ILexRule,IProvideClone<EachRule>
 {
+    public override int GetHashCode()
+    {
+        return string.Join("",Rules.Select(a=>a.GetHashCode())).GetHashCode();
+    }
     public string DebuggerDisplay()
     {
         var t = string.Join(", ", this.Rules.Select(a => a.DebuggerDisplay()));
@@ -46,7 +50,12 @@ public struct EachRule : ILexRule,IProvideClone<EachRule>
         Rules = rules;
         CloningProp = () => new EachRule(rules);
     }
-
+    public EachRule(params IReadOnlyList<ILexRuleConvertible> rules)
+    {
+        Rules = rules.Select(a=>a.GetRule()).ToList();
+        var rule = Rules;
+        CloningProp = () => new EachRule(rule);
+    }
     public bool Validate()
     {
         return true;
