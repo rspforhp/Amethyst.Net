@@ -1,9 +1,22 @@
 
 using System.Diagnostics;
 using System.Text;
-using PLGSGen.Rework;
 
-namespace PLGSGen;
+public static class RangeExtension
+{
+    public static bool InRangeInclusive(this Range r,int val)
+    {
+        var f = r.Start.Value;
+        var e = r.End.Value;
+        return val >= f && val <= e;
+    }
+    public static bool InRangeExclusive(this Range r,int val)
+    {
+        var f = r.Start.Value;
+        var e = r.End.Value;
+        return val >= f && val < e;
+    }
+}
 
 [DebuggerDisplay("{LeftString()}")]
 public struct SimpleStringReader
