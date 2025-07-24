@@ -511,34 +511,34 @@ public static class AmethystShit
 
     //TODO: 
     public static ParsableSequence TypeParam = SwitchSequence.Make(Identifier).Verify();
-    
-    public static ParsableSequence TypeArgumentList=ParsableSequence.Make()
+
+    public static ParsableSequence TypeArgumentList = ParsableSequence.Make()
         .Add("<ts[]>")
-        .Define('<',StringSequence.Make("<"))
-        .Define('>',StringSequence.Make(">"))
+        .Define('<', StringSequence.Make("<"))
+        .Define('>', StringSequence.Make(">"))
         .Define('t', TypeArgument)
         .Define('s', ParsableSequence.Make()
             .Add(",t")
-            .Define('t', TypeArgument)  
-            .Define(',',StringSequence.Make(","))
+            .Define('t', TypeArgument)
+            .Define(',', StringSequence.Make(","))
             .Verify())
         .Verify();
 
     public static ParsableSequence TypeArgument = SwitchSequence.Make(Type, ParsableSequence.Make()
         .Add("ta[0.1]")
-        .Define('t',TypeParam)
-        .Define('a',NullableTypeAnnotation)
+        .Define('t', TypeParam)
+        .Define('a', NullableTypeAnnotation)
         .Verify()).Verify();
 
     public static ParsableSequence NamespaceOrTypeName = SwitchSequence.Make(
         (ParsableSequence.Make()
             .Add("il[0.1]s[]")
-            .Define('i',Identifier)
-            .Define('l',TypeArgumentList)
+            .Define('i', Identifier)
+            .Define('l', TypeArgumentList)
             .Define('s', ParsableSequence.Make()
                 .Add(".il[0.1]")
-                .Define('i',Identifier)
-                .Define('l',TypeArgumentList)
+                .Define('i', Identifier)
+                .Define('l', TypeArgumentList)
                 .Verify())
             .Verify()),
         (ParsableSequence.Make()
@@ -546,20 +546,16 @@ public static class AmethystShit
             .Define('a', QualifiedAliasMember)
             .Define('s', ParsableSequence.Make()
                 .Add(".il[0.1]")
-                .Define('i',Identifier)
-                .Define('l',TypeArgumentList)
+                .Define('i', Identifier)
+                .Define('l', TypeArgumentList)
                 .Verify())
             .Verify())
-        ).Verify();    
+    ).Verify();
 
-    
-    public static ParsableSequence NamespaceName = SwitchSequence.Make(NamespaceOrTypeName).Verify();    
-    public static ParsableSequence TypeName = SwitchSequence.Make(NamespaceOrTypeName).Verify();    
-    
-    
-    
-    
-    
+
+    public static ParsableSequence NamespaceName = SwitchSequence.Make(NamespaceOrTypeName).Verify();
+    public static ParsableSequence TypeName = SwitchSequence.Make(NamespaceOrTypeName).Verify();
+
 
     public static ParsableSequence DynamicTypeKeyword =
         StringSequence.Make("dynamic").AddValidation(delegate(string s, SequenceDictionary d)
@@ -588,15 +584,15 @@ public static class AmethystShit
             d.ReadString = "System.String";
             return true;
         }).Verify();
-    
+
     public static ParsableSequence SByteTypeKeyword = StringSequence.Make("sbyte").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.SByte";
             return true;
         }).Verify();
-    
-    
+
+
     public static ParsableSequence ByteTypeKeyword = StringSequence.Make("byte").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
@@ -604,52 +600,56 @@ public static class AmethystShit
             return true;
         }).Verify();
 
-        
+
     public static ParsableSequence ShortTypeKeyword = StringSequence.Make("short").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.Int16";
             return true;
         }).Verify();
-    
+
     public static ParsableSequence UShortTypeKeyword = StringSequence.Make("ushort").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.UInt16";
             return true;
         }).Verify();
-    
+
     public static ParsableSequence IntTypeKeyword = StringSequence.Make("int").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.Int32";
             return true;
         }).Verify();
+
     public static ParsableSequence UIntTypeKeyword = StringSequence.Make("uint").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.UInt32";
             return true;
         }).Verify();
-    
+
     public static ParsableSequence LongTypeKeyword = StringSequence.Make("long").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.Int64";
             return true;
         }).Verify();
+
     public static ParsableSequence ULongTypeKeyword = StringSequence.Make("ulong").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.UInt64";
             return true;
         }).Verify();
+
     public static ParsableSequence CharTypeKeyword = StringSequence.Make("char").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.Char";
             return true;
         }).Verify();
+
     public static ParsableSequence DecimalTypeKeyword = StringSequence.Make("decimal").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
@@ -663,15 +663,16 @@ public static class AmethystShit
             d.ReadString = "System.Single";
             return true;
         }).Verify();
+
     public static ParsableSequence DoubleTypeKeyword = StringSequence.Make("double").AddValidation(
         delegate(string s, SequenceDictionary d)
         {
             d.ReadString = "System.Double";
             return true;
         }).Verify();
-    
 
-    //TODO: validation for all the type sequences!
+
+    //TODO: validation for all the c# sequences!
 
     public static ParsableSequence Type = SwitchSequence.Make(
         LazySequence.Make(() => RefType),
@@ -715,20 +716,28 @@ public static class AmethystShit
         .Define('a', NullableTypeAnnotation)
         .Verify();
 
-    public static ParsableSequence ValType = SwitchSequence.Make(LazySequence.Make(()=>NNValType), NValType).Verify();
+    public static ParsableSequence ValType = SwitchSequence.Make(LazySequence.Make(() => NNValType), NValType).Verify();
 
-    public static ParsableSequence NNValType = SwitchSequence.Make(LazySequence.Make(()=>StructType), EnumType).Verify();
+    public static ParsableSequence NNValType =
+        SwitchSequence.Make(LazySequence.Make(() => StructType), EnumType).Verify();
 
-    public static ParsableSequence StructType = SwitchSequence.Make(TypeName, LazySequence.Make(()=>SimpleType), TupleType).Verify();
+    public static ParsableSequence StructType =
+        SwitchSequence.Make(TypeName, LazySequence.Make(() => SimpleType), TupleType).Verify();
 
-    public static ParsableSequence SimpleType = SwitchSequence.Make( LazySequence.Make(()=>NumericType) ,BoolTypeKeyword).Verify();
+    public static ParsableSequence SimpleType =
+        SwitchSequence.Make(LazySequence.Make(() => NumericType), BoolTypeKeyword).Verify();
 
-    
-    public static ParsableSequence IntegralType = SwitchSequence.Make(SByteTypeKeyword,ByteTypeKeyword,ShortTypeKeyword,UShortTypeKeyword,IntTypeKeyword,UIntTypeKeyword,LongTypeKeyword,ULongTypeKeyword,CharTypeKeyword).Verify();
-    public static ParsableSequence FloatingType = SwitchSequence.Make(FloatTypeKeyword,DoubleTypeKeyword).Verify();
-    public static ParsableSequence NumericType = SwitchSequence.Make(IntegralType,FloatingType,DecimalTypeKeyword).Verify();
 
-    public static ParsableSequence TupleType=ParsableSequence.Make()
+    public static ParsableSequence IntegralType = SwitchSequence.Make(SByteTypeKeyword, ByteTypeKeyword,
+        ShortTypeKeyword, UShortTypeKeyword, IntTypeKeyword, UIntTypeKeyword, LongTypeKeyword, ULongTypeKeyword,
+        CharTypeKeyword).Verify();
+
+    public static ParsableSequence FloatingType = SwitchSequence.Make(FloatTypeKeyword, DoubleTypeKeyword).Verify();
+
+    public static ParsableSequence NumericType =
+        SwitchSequence.Make(IntegralType, FloatingType, DecimalTypeKeyword).Verify();
+
+    public static ParsableSequence TupleType = ParsableSequence.Make()
         .Add("(el[1.])")
         .Define('(', StringSequence.Make("("))
         .Define(')', StringSequence.Make(")"))
@@ -739,25 +748,150 @@ public static class AmethystShit
             .Define(',', StringSequence.Make(","))
             .Verify())
         .Verify();
-    
-    public static ParsableSequence TupleTypeElement=ParsableSequence.Make()
+
+    public static ParsableSequence TupleTypeElement = ParsableSequence.Make()
         .Add("tn[0.1]")
-        .Define('t',Type)
-        .Define('n',Identifier)
+        .Define('t', Type)
+        .Define('n', Identifier)
         .Verify();
 
     public static ParsableSequence EnumType = SwitchSequence.Make(TypeName).Verify();
-    
-    public static ParsableSequence NValType=ParsableSequence.Make()
+
+    public static ParsableSequence NValType = ParsableSequence.Make()
         .Add("na")
         .Define('n', NNValType)
-        .Define('a',NullableTypeAnnotation)
+        .Define('a', NullableTypeAnnotation)
         .Verify();
 
 
-    public static ParsableSequence UnmanagedType = SwitchSequence.Make(ValType,PointerType).Verify();
+    public static ParsableSequence UnmanagedType = SwitchSequence.Make(ValType, PointerType).Verify();
 
     public static ParsableSequence VarReference = SwitchSequence.Make(Expression).Verify();
+
+    public static ParsableSequence Pattern =
+        SwitchSequence.Make(DeclarationPattern, ConstantPattern, VarPattern).Verify();
+
+    public static ParsableSequence SingleVariableDesignation = SwitchSequence.Make(Identifier).Verify();
+
+    public static ParsableSequence SimpleDesignation = SwitchSequence.Make(SingleVariableDesignation).Verify();
+
+    public static ParsableSequence DeclarationPattern = ParsableSequence.Make()
+        .Add("td")
+        .Define('t', Type)
+        .Define('d', SimpleDesignation)
+        .Verify();
+
+    public static ParsableSequence ConstantPattern = SwitchSequence.Make(ConstantExpression).Verify();
+
+    public static ParsableSequence Designation = SwitchSequence.Make(SimpleDesignation).Verify();
+
+    public static ParsableSequence VarPattern = ParsableSequence.Make()
+        .Add("vd")
+        .Define('v', StringSequence.Make("var"))
+        .Define('d', Designation)
+        .Verify();
+
+
+    public static ParsableSequence ArgumentList = ParsableSequence.Make()
+        .Add("as[]")
+        .Define('a', Argument)
+        .Define('s', ParsableSequence.Make()
+            .Add(",a")
+            .Define(',', StringSequence.Make(","))
+            .Define('a', Argument)
+            .Verify())
+        .Verify();
+
+    public static ParsableSequence Argument = ParsableSequence.Make()
+        .Add("n[0.1]v")
+        .Define('n', ArgumentName)
+        .Define('v', ArgumentValue)
+        .Verify();
+
+    public static ParsableSequence ArgumentName = ParsableSequence.Make()
+        .Add("n:")
+        .Define('n', Identifier)
+        .Define(':', StringSequence.Make(":"))
+        .Verify();
+
+    public static ParsableSequence ArgumentValue = SwitchSequence.Make(Expression,
+            ParsableSequence.Make().Add("pr").Define('p', StringSequence.Make("in")).Define('r', VariableReference)
+                .Verify(),
+            ParsableSequence.Make().Add("pr").Define('p', StringSequence.Make("ref")).Define('r', VariableReference)
+                .Verify(),
+            ParsableSequence.Make().Add("pr").Define('p', StringSequence.Make("out")).Define('r', VariableReference)
+                .Verify()
+        )
+        .Verify();
+
+    //ValueOfExpression for const generics which i plant for amethyst
+    //Questionable?
+    public static ParsableSequence PrimaryExpression = SwitchSequence.Make(Literal, InterpolatedStringExpression,
+        SimpleName, ParenthesizedExpression, TupleExpression, MemberAccess, NullConditionalMemberAccess,
+        InvocationExpression, ElementAccess, NullConditionalElementAccess, ThisAccess, BaseAccess,
+        PostIncrementExpression, PostDecrementExpression,
+        NullForgivingExpression, ArrayCreationExpression, ObjectCreationExpression, DelegateCreationExpression,
+        AnonymousObjectCreationExpression,
+        TypeOfExpression, SizeOfExpression, CheckedExpression, UncheckedExpression, DefaultValueExpression,
+        NameOfExpression, AnonymousMethodExpression, PointerMemberAccess, PointerElementAccess, StackAllocExpression
+    ).Verify();
+
+    public static ParsableSequence InterpolatedStringExpression = SwitchSequence
+        .Make(InterpolatedRegularStringExpression, InterpolatedVerbatimStringExpression)
+        .Verify();
+
+    public static ParsableSequence InterpolatedRegularStringExpression = ParsableSequence.Make()
+        .Add("sm[0.1]s[]e")
+        .Define('s', InterpolatedRegularStringStart)
+        .Define('m', InterpolatedRegularStringMid)
+        .Define('s', ParsableSequence.Make()
+            .Add("{r}m[0.1]")
+            .Define('{', StringSequence.Make("{"))
+            .Define('}', StringSequence.Make("}"))
+            .Define('r', RegularInterpolation)
+            .Define('m', InterpolatedRegularStringMid)
+            .Verify())
+        .Define('e', InterpolatedRegularStringEnd)
+        .Verify();
+
+    public static ParsableSequence InterpolationMinimumWidth = SwitchSequence.Make(ConstantExpression).Verify();
+
+
+    public static ParsableSequence RegularInterpolation = ParsableSequence.Make()
+        .Add("es[0.1]f[0.1]")
+        .Define('e', Expression)
+        .Define('s', ParsableSequence.Make()
+            .Add(",w")
+            .Define(',', StringSequence.Make(","))
+            .Define('w', InterpolationMinimumWidth)
+            .Verify())
+        .Define('f', RegularInterpolationFormat)
+        .Verify();
+
+    public static ParsableSequence InterpolatedRegularStringStart = StringSequence.Make("$\"").Verify();
+
+    public static ParsableSequence InterpolatedRegularStringMid = ParsableSequence.Make()
+        .Add("e[1.]")
+        .Define('e', InterpolatedRegularStringElement)
+        .Verify();
+
+    public static ParsableSequence RegularInterpolationFormat = ParsableSequence.Make()
+        .Add(":e[1.]")
+        .Define(':', StringSequence.Make(":"))
+        .Define('e', InterpolatedRegularStringElement)
+        .Verify();
+
+    public static ParsableSequence InterpolatedRegularStringEnd = StringSequence.Make("\"").Verify();
+
+    public static ParsableSequence InterpolatedRegularStringElement = SwitchSequence
+        .Make(InterpolatedRegularStringCharacter, SimpleEscapeSequence, HexEscapeSequence, UnicodeEscapeSequence,
+            OpenBraceEscapeSequence, CloseBraceEscapeSequence).Verify();
+
+    public static ParsableSequence InterpolatedRegularStringCharacter = FunctionParsableSequence.Make(c =>
+        c != '\"' && c != '\\' && c != '{' && c != '}' && !NewLineCharacters.Contains(c)).Verify();
+
     
-    
+    //TODO: CONTINUE
+// interpolated verbatim string expressions
+    public static ParsableSequence InterpolatedVerbatimStringExpression;
 }
