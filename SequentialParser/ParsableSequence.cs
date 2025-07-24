@@ -2,6 +2,51 @@ using System.Text;
 
 namespace SequentialParser;
 
+public sealed class SequenceDictionary : Dictionary<string, object>
+{
+    public string ReadString
+    {
+        get =>(string) this[ParsableSequence.ReadStringKey];
+        set => this[ParsableSequence.ReadStringKey]=value;
+    }
+    public object ParsedValue
+    {
+        get =>this[ParsableSequence.ExtraParsedValue];
+        set => this[ParsableSequence.ExtraParsedValue]=value;
+    }
+    public object ParsedValue2
+    {
+        get =>this[ParsableSequence.ExtraParsedValue+"2"];
+        set => this[ParsableSequence.ExtraParsedValue+"2"]=value;
+    }
+    public ulong SwitchIndex
+    {
+        get =>(ulong) this[ParsableSequence.SwitchIndex];
+        set => this[ParsableSequence.SwitchIndex]=value;
+    }
+  
+    public void AddSeqElement(char id, ulong arrayIndex, int seqIndex, SequenceDictionary d)
+    {
+        this[ParsableSequence.SequenceIdKey+ id + $"_{arrayIndex}_@" + seqIndex] = d;
+    }
+    public SequenceDictionary GetSeqElement(char id, ulong arrayIndex, int seqIndex)
+    {
+        return (SequenceDictionary)this[ParsableSequence.SequenceIdKey+ id + $"_{arrayIndex}_@" + seqIndex];
+    }
+
+    public List<SequenceDictionary> GetSeqElements(char id, int seqIndex)
+    {
+        List<SequenceDictionary> l = new();
+        for (ulong i = 0; i < ulong.MaxValue; i++)
+        {
+            if (!this.TryGetValue(ParsableSequence.SequenceIdKey + id + $"_{i}_@" + seqIndex, out var value)) break;
+            l.Add((SequenceDictionary)value);
+        }
+        return l;
+    }
+}
+
+
 public abstract class AbstractParsableSequence : ParsableSequence
 {
     
@@ -26,7 +71,9 @@ public abstract class AbstractParsableSequence : ParsableSequence
 public sealed class FunctionParsableSequence : AbstractParsableSequence
 {
     public Func<char, bool> Read;
- 
+ //TODO: proper unicode stuff
+    public static FunctionParsableSequence AnyChar = (FunctionParsableSequence)Make(c=>true).Verify();
+    
     
     public static FunctionParsableSequence Digit = (FunctionParsableSequence)Make(char.IsDigit).Verify();
     public static FunctionParsableSequence Letter = (FunctionParsableSequence)Make(char.IsLetter).Verify();
@@ -49,7 +96,7 @@ public sealed class FunctionParsableSequence : AbstractParsableSequence
         if (Read == null) throw new Exception("Reading function cant be null!");
         return this;
     }
-    public override Dictionary<string, object> Parse(ref SimpleStringReader reader)
+    public override SequenceDictionary Parse(ref SimpleStringReader reader)
     {
         var rs = reader.Peek(1);
         char s = '\0';
@@ -61,9 +108,10 @@ public sealed class FunctionParsableSequence : AbstractParsableSequence
 
         reader.Position++;
         var ss = s.ToString();
-        var d = new Dictionary<string, object>
+        var d = new SequenceDictionary
         {
-            [ReadStringKey] = ss
+            [ReadStringKey] = ss,
+            [ExtraParsedValue]=s
         };
         if (!DoValidatation(d)) d = null;
         return d;
@@ -92,15 +140,17 @@ public sealed class StringSequence : AbstractParsableSequence
         if (Sequences.Length == 0) throw new Exception("Sequences length cant be 0!");
         return this;
     }
-    public override Dictionary<string, object> Parse(ref SimpleStringReader reader)
+    public override SequenceDictionary Parse(ref SimpleStringReader reader)
     {
+        List<SequenceDictionary> worked = new();
         foreach (var seq in Sequences)
         {
             if (reader.Exists(seq,true))
             {
-                var d=new Dictionary<string, object>()
+                var d=new SequenceDictionary()
                 {
-                    [ReadStringKey]=seq
+                    [ReadStringKey]=seq,
+                    [ExtraParsedValue]=seq,
                 };
                 if (EnumType != null)
                 {
@@ -114,10 +164,12 @@ public sealed class StringSequence : AbstractParsableSequence
                     }
                 }
                 if (!DoValidatation(d)) d = null;
-                return d;
+                if (d == null) continue;
+                worked.Add(d);
             }
         }
-        return null;
+
+        return worked.Count == 0 ? null : worked.OrderByDescending(a=>a.ReadString.Length).ToList()[0];
     }
 }
 
@@ -136,9 +188,10 @@ public sealed class SwitchSequence : AbstractParsableSequence
         if (Sequences.Count == 0) throw new Exception("Sequences length cant be 0!");
         return this;
     }
-    public override Dictionary<string, object> Parse(ref SimpleStringReader reader)
+    public override SequenceDictionary Parse(ref SimpleStringReader reader)
     {
         ulong i = 0;
+        List<SequenceDictionary> worked = new();
         foreach (var seq in Sequences)
         {
             var p = reader.Position;
@@ -151,26 +204,51 @@ public sealed class SwitchSequence : AbstractParsableSequence
                     d = null;
             }
             if (d != null)
-                return d;
+                worked.Add(d);
             i++;
         }
-        return null;
+        return worked.Count == 0 ? null : worked.OrderByDescending(a=>a.ReadString.Length).ToList()[0];
+    }
+}
+
+
+public sealed class LazySequence : AbstractParsableSequence
+{
+    public static LazySequence Make(Func<ParsableSequence> seq)
+    {
+        var t = new LazySequence();
+        t.Sequence = seq;
+        return t;
+    }
+
+    public Func<ParsableSequence> Sequence;
+    public ParsableSequence GotSequence;
+    
+
+    public override ParsableSequence Verify()
+    {
+        if (Sequence==null) throw new Exception("Lazy func cant be null!");
+        return this;
+    }
+    public override SequenceDictionary Parse(ref SimpleStringReader reader)
+    {
+        if (GotSequence == null) GotSequence = Sequence();
+        return GotSequence.Parse(ref reader);
     }
 }
 
 
 
-
 public class ParsableSequence
 {
-    public event Func<string, Dictionary<string, object>, bool> Validate;
+    public event Func<string, SequenceDictionary, bool> Validate;
 
-    public ParsableSequence AddValidation(Func<string, Dictionary<string, object>, bool> v)
+    public ParsableSequence AddValidation(Func<string, SequenceDictionary, bool> v)
     {
         Validate += v;
         return this;
     }
-    public bool DoValidatation(Dictionary<string,object> d)
+    public bool DoValidatation(SequenceDictionary d)
     {
         if (Validate == null) return true;
         else
@@ -195,10 +273,10 @@ public class ParsableSequence
     public const string ExtraParsedValue = "PARSED_VALUE";
     public const string SwitchIndex = "SWITCH_INDEX";
 
-    public virtual Dictionary<string, object> Parse(ref SimpleStringReader reader)
+    public virtual SequenceDictionary Parse(ref SimpleStringReader reader)
     {
         StringBuilder b = new();
-        var d = new Dictionary<string, object>();
+        var d = new SequenceDictionary();
         for (int i = 0; i < References.Count; i++)
         {
             var refe = References[i];
@@ -210,7 +288,7 @@ public class ParsableSequence
                 var rd = prefe.Parse(ref reader);
                 if (rd != null)
                 {
-                    d[SequenceIdKey + refe.Id + $"_{j}_@" + i] = rd;
+                    d.AddSeqElement(refe.Id,j,i,rd);
                     b.Append(rd[ReadStringKey]);
                 }
                 else break;
@@ -227,7 +305,7 @@ public class ParsableSequence
         return d;
     }
 
-    public Dictionary<string, object> ParseOnce(SimpleStringReader reader) => Parse(ref reader);
+    public SequenceDictionary ParseOnce(SimpleStringReader reader) => Parse(ref reader);
 
 
     protected ParsableSequence()
