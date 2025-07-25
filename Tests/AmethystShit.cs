@@ -670,6 +670,12 @@ public static class AmethystShit
             d.ReadString = "System.Double";
             return true;
         }).Verify();
+    
+    public static ParsableSequence PredefinedType=SwitchSequence.Make(BoolTypeKeyword,ByteTypeKeyword,CharTypeKeyword,DecimalTypeKeyword,DoubleTypeKeyword,FloatTypeKeyword,IntTypeKeyword
+    ,LongTypeKeyword,ObjectTypeKeyword,SByteTypeKeyword,ShortTypeKeyword,StringTypeKeyword,UIntTypeKeyword,ULongTypeKeyword,
+    UShortTypeKeyword
+    
+    ).Verify();
 
 
     //TODO: validation for all the c# sequences!
@@ -841,10 +847,10 @@ public static class AmethystShit
         .Verify();
 
     public static ParsableSequence InterpolatedRegularStringExpression = ParsableSequence.Make()
-        .Add("sm[0.1]s[]e")
+        .Add("sm[0.1]l[]e")
         .Define('s', InterpolatedRegularStringStart)
         .Define('m', InterpolatedRegularStringMid)
-        .Define('s', ParsableSequence.Make()
+        .Define('l', ParsableSequence.Make()
             .Add("{r}m[0.1]")
             .Define('{', StringSequence.Make("{"))
             .Define('}', StringSequence.Make("}"))
@@ -890,8 +896,140 @@ public static class AmethystShit
     public static ParsableSequence InterpolatedRegularStringCharacter = FunctionParsableSequence.Make(c =>
         c != '\"' && c != '\\' && c != '{' && c != '}' && !NewLineCharacters.Contains(c)).Verify();
 
+
+    public static ParsableSequence InterpolatedVerbatimStringExpression = ParsableSequence.Make()
+        .Add("sm[0.1]l[]e")
+        .Define('s', InterpolatedVerbatimStringStart)
+        .Define('m', InterpolatedVerbatimStringMid)
+        .Define('e', InterpolatedVerbatimStringEnd)
+        .Define('l', ParsableSequence.Make()
+            .Add("{i}m[0.1]")
+            .Define('{', StringSequence.Make("{"))
+            .Define('}', StringSequence.Make("}"))
+            .Define('r', VerbatimInterpolation)
+            .Define('m', InterpolatedVerbatimStringMid)
+            .Verify()
+        )
+        .Verify();
     
-    //TODO: CONTINUE
-// interpolated verbatim string expressions
-    public static ParsableSequence InterpolatedVerbatimStringExpression;
+    public static ParsableSequence VerbatimInterpolation=ParsableSequence.Make()
+        .Add("es[0.1]f")
+        .Define('e', Expression)
+        .Define('s',
+            ParsableSequence.Make()
+                .Add(",w")
+                .Define(',', StringSequence.Make(","))
+                .Define('w', InterpolationMinimumWidth)
+                .Verify()
+            )
+        .Define('f', VerbatimInterpolationFormat)
+        .Verify();
+    
+    public static ParsableSequence InterpolatedVerbatimStringStart=StringSequence.Make("$@\"","@$\"").Verify();
+    
+    public static ParsableSequence InterpolatedVerbatimStringMid= ParsableSequence.Make()
+        .Add("e[1.]")
+        .Define('e', InterpolatedVerbatimStringElement)
+        .Verify();
+    
+    public static ParsableSequence VerbatimInterpolationFormat=ParsableSequence.Make()
+        .Add(":e[1.]")
+        .Define(':', StringSequence.Make(":"))
+        .Define('e',InterpolatedVerbatimStringElement)
+        .Verify();
+    
+    public static ParsableSequence  InterpolatedVerbatimStringEnd=StringSequence.Make("\"").Verify();
+
+    public static ParsableSequence InterpolatedVerbatimStringElement = SwitchSequence.Make(InterpolatedVerbatimStringCharacter,QuoteEscapeSequence,OpenBraceEscapeSequence,CloseBraceEscapeSequence).Verify();
+    public static ParsableSequence InterpolatedVerbatimStringCharacter = FunctionParsableSequence.Make(c =>
+        c!='\"'&&c!='{'&&c!='}').Verify();
+    
+    //TODO: context sensitive string interpolation
+    public static ParsableSequence OpenBraceEscapeSequence=StringSequence.Make("{{").Verify();
+    public static ParsableSequence CloseBraceEscapeSequence=StringSequence.Make("}}").Verify();
+
+    public static ParsableSequence SimpleName=ParsableSequence.Make()
+        .Add("il[0.1]")
+        .Define('i', Identifier)
+        .Define('l', TypeArgumentList)
+        .Verify();
+    
+    public static ParsableSequence ParenthesizedExpression=ParsableSequence.Make()
+        .Add("(e)")
+        .Define('(', StringSequence.Make("("))
+        .Define(')', StringSequence.Make(")"))
+        .Define('e', Expression)
+        .Verify();
+    
+    public static ParsableSequence TupleExpression=SwitchSequence.Make(
+        (ParsableSequence.Make()
+            .Add("(el[1.])")
+            .Define('(',StringSequence.Make("("))
+            .Define(')',StringSequence.Make(")"))
+            .Define('e', TupleElement)
+            .Define('l', ParsableSequence.Make()
+                .Add(",e")
+                .Define(',', StringSequence.Make(","))
+                .Define('e',TupleElement)
+                .Verify())
+            .Verify()),
+        DeconstructionExpression
+        ).Verify();
+    
+    public static ParsableSequence TupleElement=ParsableSequence.Make()
+        .Add("le")
+        .Define('e',Expression)
+        .Define('l',ParsableSequence.Make()
+            .Add("i:")
+            .Define('i',Identifier)
+            .Define(':', StringSequence.Make(":"))
+            .Verify())
+        .Verify();
+    
+    
+    public static ParsableSequence DeconstructionExpression=ParsableSequence.Make()
+        .Add("vt")
+        .Define('v',StringSequence.Make("var"))
+        .Define('t', DeconstructionTuple)
+        .Verify();
+    
+    public static ParsableSequence DeconstructionTuple=ParsableSequence.Make()
+        .Add("(el[1.])")
+        .Define('(',StringSequence.Make("("))
+        .Define(')',StringSequence.Make(")"))
+        .Define('e',DeconstructionElement)
+        .Define('l',ParsableSequence.Make()
+            .Add(",e")
+            .Define(',',StringSequence.Make(","))
+            .Define('e',DeconstructionElement)
+            .Verify())
+        .Verify();
+
+    public static ParsableSequence DeconstructionElement = SwitchSequence.Make(DeconstructionTuple,Identifier).Verify();
+
+
+    public static ParsableSequence MemberAccess = SwitchSequence.Make(
+        (ParsableSequence.Make()
+            .Add("e.il[0.1]")   
+            .Define('e',PrimaryExpression)
+            .Define('.',StringSequence.Make("."))
+            .Define('i',Identifier)
+            .Define('l',TypeArgumentList)
+            .Verify()),
+        (ParsableSequence.Make()
+            .Add("t.il[0.1]")
+            .Define('t',PredefinedType)
+            .Define('.',StringSequence.Make("."))
+            .Define('i',Identifier)
+            .Define('l',TypeArgumentList)
+            .Verify()),
+        (ParsableSequence.Make()
+            .Add("a.il[0.1]")
+            .Define('a',QualifiedAliasMember)
+            .Define('.',StringSequence.Make("."))
+            .Define('i',Identifier)
+            .Define('l',TypeArgumentList)
+            .Verify())
+        ).Verify();
+//12.8.8
 }
