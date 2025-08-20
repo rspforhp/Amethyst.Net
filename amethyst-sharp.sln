@@ -15,5 +15,7 @@ Global
 		{C33F10F6-EE63-45A7-9E80-77580D1363C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C33F10F6-EE63-45A7-9E80-77580D1363C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C33F10F6-EE63-45A7-9E80-77580D1363C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67220100-C4CD-4FE6-9D83-5A402D8FDF22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67220100-C4CD-4FE6-9D83-5A402D8FDF22}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 EndGlobal

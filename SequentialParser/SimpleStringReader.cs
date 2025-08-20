@@ -1,16 +1,17 @@
-
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 
 public static class RangeExtension
 {
-    public static bool InRangeInclusive(this Range r,int val)
+    public static bool InRangeInclusive(this Range r, int val)
     {
         var f = r.Start.Value;
         var e = r.End.Value;
         return val >= f && val <= e;
     }
-    public static bool InRangeExclusive(this Range r,int val)
+
+    public static bool InRangeExclusive(this Range r, int val)
     {
         var f = r.Start.Value;
         var e = r.End.Value;
@@ -19,19 +20,17 @@ public static class RangeExtension
 }
 
 [DebuggerDisplay("{LeftString()}")]
+[Obsolete("Use AdvancedStringReader",true)]
 public struct SimpleStringReader
 {
     private string UnderlyingString;
     public uint Position;
 
-    public string LeftString()
-    {
-        return UnderlyingString[(int)Position..];
-    }
-    
+    public string LeftString() => UnderlyingString[(int)Position..];
+
     public string Peek(uint length)
     {
-        var l=Math.Min(Position+length, (uint)UnderlyingString.Length);
+        var l = Math.Min(Position + length, (uint)UnderlyingString.Length);
         if (Position > l) return string.Empty;
         return UnderlyingString[(int)Position..((int)l)];
     }
@@ -49,7 +48,7 @@ public struct SimpleStringReader
         string resultingString = "";
         curRead += Peek(1);
         var r = !validator(curRead);
-        if(r)
+        if (r)
             do
             {
                 resultingString = curRead;
@@ -57,21 +56,22 @@ public struct SimpleStringReader
                 var t = Peek(1);
                 if (t == string.Empty) break;
                 curRead += t;
-            } while (!validator(curRead) || curRead==resultingString);
+            } while (!validator(curRead) || curRead == resultingString);
+
         return resultingString;
     }
 
     public void SkipWhitespace()
     {
         string p = Peek(1);
-        
+
         while (p.Length > 0 && string.IsNullOrWhiteSpace(p))
         {
             Position++;
             p = Peek(1);
         }
     }
- 
+
     public bool Exists(string toRead, bool adjustIfTrue)
     {
         var l = toRead.Length;
@@ -81,55 +81,17 @@ public struct SimpleStringReader
             Position += (uint)s.Length;
         return true;
     }
+
     public bool Exists(char toRead, bool adjustIfTrue)
     {
         var l = 1;
         var s = Peek((uint)l)[0];
-        if (s!=toRead) return false;
+        if (s != toRead) return false;
         if (adjustIfTrue)
             Position += 1;
         return true;
     }
-    public bool Exists(char[] toRead, bool adjustIfTrue,out char ReadChar)
-    {
-        var l = 1;
-        var s = Peek((uint)l)[0];
-        ReadChar = s;
-        if (!toRead.Contains(s)) return false;
-        if (adjustIfTrue)
-            Position += 1;
-        return true;
-    }
-    public bool ExistsReverse(char[] toRead, bool adjustIfTrue,out char ReadChar)
-    {
-        var l = 1;
-        var s = Peek((uint)l)[0];
-        ReadChar = s;
-        if (toRead.Contains(s)) return false;
-        if (adjustIfTrue)
-            Position += 1;
-        return true;
-    }
-    public bool Exists(Range toRead, bool adjustIfTrue,out char ReadChar)
-    {
-        var l = 1;
-        var s = Peek((uint)l)[0];
-        ReadChar = s;
-        if (!toRead.InRangeInclusive(s)) return false;
-        if (adjustIfTrue)
-            Position += 1;
-        return true;
-    }
-    public bool ExistsReverse(Range toRead, bool adjustIfTrue,out char ReadChar)
-    {
-        var l = 1;
-        var s = Peek((uint)l)[0];
-        ReadChar = s;
-        if (toRead.InRangeInclusive(s)) return false;
-        if (adjustIfTrue)
-            Position += 1;
-        return true;
-    }
+
     public SimpleStringReader()
     {
     }
@@ -191,9 +153,10 @@ public struct SimpleStringReader
 
         return builder.ToString();
     }
-    public string ReadQuotedString()
+
+    public string ReadQuotedString(char quote = '\"')
     {
-        if (!Exists("\"", true)) return null;
+        if (!Exists(quote.ToString(), true)) return null;
         StringBuilder builder = new();
 
         while (true)
@@ -205,10 +168,17 @@ public struct SimpleStringReader
                 switch (escapedChar)
                 {
                     case 'u':
+                        var r1 = Read(4);
+                        builder.Append(char.ConvertFromUtf32(int.Parse(r1, NumberStyles.HexNumber)));
                         break;
                     case 'U':
+                        var r2 = Read(8);
+                        builder.Append(char.ConvertFromUtf32(int.Parse(r2, NumberStyles.HexNumber)));
                         break;
                     case 'x':
+                        Debugger.Break();
+                        var r3 = Read(4);
+                        builder.Append((char)int.Parse(r3, NumberStyles.HexNumber));
                         break;
                     case '\'':
                         builder.Append('\'');
@@ -249,7 +219,7 @@ public struct SimpleStringReader
             }
             else
             {
-                if (read == '\"') break;
+                if (read == quote) break;
                 builder.Append(read);
             }
         }
