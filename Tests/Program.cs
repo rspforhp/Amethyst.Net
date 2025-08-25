@@ -1,42 +1,128 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using SequentialParser;
-using SequentialParser.Regex;
-using SequentialParser.Regex.CharacterClasses;
-using UnicodeCategory = SequentialParser.Regex.CharacterClasses.UnicodeCategory;
+using SequentialParser.AutoParser;
+using SequentialParser.ManualParser;
 
 namespace Tests;
 
-public static class Program
+public abstract class Program
 {
-    public class TestHandler : GroupConstructHandler
+    public struct OpenCurlyBracket
     {
-        public override bool Handle(ref AdvancedStringReader reader,StringBuilder b, uint startPos, uint endPos)
+        [StopStringOn('}')]
+        public const string _ = "{";
+    }
+    public struct CloseCurlyBracket
+    {
+        [StopStringOn('{')]
+        public const string _ = "}";
+    }
+    
+    public struct OpenBracket
+    {
+        [StopStringOn(')')]
+        public const string _ = "(";
+    }
+    public struct CloseBracket
+    {
+        [StopStringOn('(','{')]
+        public const string _ = ")";
+    }
+   
+    public class ClassParsing
+    {
+        public enum ClassAccess
         {
-            return true;
+            _,
+            @public,
+            @private,
+            @protected,
+            @internal,
         }
+
+        public ClassAccess Access;
+
+        public enum ClassModifier
+        {
+            _,
+            @static,
+            @sealed,
+            @abstract,
+        }
+
+        public ClassModifier[] Modifiers;
+
+        [Position(nameof(Modifiers),PositionAttribute.Position.After)]
+        public const string @class = "class";
+
+        [StopStringOn('{','}')]
+        public string Name;
+
+        public OpenCurlyBracket _open;
+
+
+        public MethodParsing[] Methods;
+
+        public CloseCurlyBracket _close;
+    }
+
+    public class MethodParsing
+    {
+        public enum MethodAccess
+        {
+            _,
+            @public,
+            @private,
+            @protected,
+            @internal,
+        }
+
+        [OptionalValue]
+        public MethodAccess Access;
+        
+        public enum MethodModifier
+        {
+            _,
+            @static,
+            @sealed,
+            @abstract,
+            @virtual,
+        }
+
+        public MethodModifier[] Modifiers;
+
+        public string ReturnType;
+        [StopStringOn('(',')')]
+        public string Name;
+
+        public OpenBracket _open;
+
+        
+        
+        public CloseBracket _close;
+
+        public OpenCurlyBracket _methodOpen;
+        
+        
+
+        public CloseCurlyBracket _methodClose;
     }
     public static void Main(string[] args)
     {
-      
-        /*
-        var g = ClassCharacter.Get(@"((\d{1,3})$testNumber$t@nameOfLink@)");
-        var reader = new AdvancedStringReader("123t:3")
-            .AddHandler("testNumber",new TestHandler())
-            .AddGroup("nameOfLink", ClassCharacter.Get<GroupConstruct>(@"(:\d)"));
-        var read=reader.Read(g);
-        Console.WriteLine(AmethystShit.CopyHandlersAndNamesHere);
-        Console.WriteLine(read);
-        */
-
-        var balancedBrackets = ClassCharacter.Get<GroupConstruct>(@"(\{@br@?\})");
-        AdvancedStringReader reader = new AdvancedStringReader("{{{}}}").AddGroup("br",balancedBrackets);
-        var readText= reader.Read(balancedBrackets);
-        Console.WriteLine(readText);
-        // Console.WriteLine(AmethystShit.CopyHandlersAndNamesHere);
-
-
+        ParsableClasses.RegisterAll<Program>();
+        var reader = new SimpleStringReader("""
+                                            public abstract sealed class Test{
+                                                public static void MethodTest(){
+                                                
+                                                }
+                                            }
+                                            """);
+        var testInt = ParsableClasses.Parse<ClassParsing>(ref reader);
+        var exc = ParsableClasses.LastException;
+        Console.WriteLine(testInt);
     }
 }
