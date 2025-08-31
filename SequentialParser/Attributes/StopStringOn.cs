@@ -1,4 +1,4 @@
-namespace SequentialParser.ManualParser;
+namespace SequentialParser.Attributes;
 
 [System.AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
 public sealed class StopStringOnAttribute : Attribute

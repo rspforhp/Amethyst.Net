@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using SequentialParser;
+using SequentialParser.Attributes;
 using SequentialParser.AutoParser;
 using SequentialParser.ManualParser;
 
@@ -13,23 +14,24 @@ public abstract class Program
 {
     public struct OpenCurlyBracket
     {
-        [StopStringOn('}')]
+        [SkipWhitespace]
         public const string _ = "{";
     }
     public struct CloseCurlyBracket
     {
-        [StopStringOn('{')]
+        [SkipWhitespace]
+        
         public const string _ = "}";
     }
     
     public struct OpenBracket
     {
-        [StopStringOn(')')]
+        [SkipWhitespace]
         public const string _ = "(";
     }
     public struct CloseBracket
     {
-        [StopStringOn('(','{')]
+        [SkipWhitespace]
         public const string _ = ")";
     }
    
@@ -44,6 +46,7 @@ public abstract class Program
             @internal,
         }
 
+        [SkipWhitespace]
         public ClassAccess Access;
 
         public enum ClassModifier
@@ -54,17 +57,21 @@ public abstract class Program
             @abstract,
         }
 
+        [SkipWhitespace]
         public ClassModifier[] Modifiers;
 
         [Position(nameof(Modifiers),PositionAttribute.Position.After)]
+        [SkipWhitespace]
         public const string @class = "class";
 
         [StopStringOn('{','}')]
+        [SkipWhitespace]
         public string Name;
 
         public OpenCurlyBracket _open;
 
 
+        [SkipWhitespace]
         public MethodParsing[] Methods;
 
         public CloseCurlyBracket _close;
@@ -82,6 +89,7 @@ public abstract class Program
         }
 
         [OptionalValue]
+        [SkipWhitespace]
         public MethodAccess Access;
         
         public enum MethodModifier
@@ -93,10 +101,13 @@ public abstract class Program
             @virtual,
         }
 
+        [SkipWhitespace]
         public MethodModifier[] Modifiers;
 
+        [SkipWhitespace]
         public string ReturnType;
         [StopStringOn('(',')')]
+        [SkipWhitespace]
         public string Name;
 
         public OpenBracket _open;

@@ -1,4 +1,4 @@
-namespace SequentialParser.AutoParser;
+namespace SequentialParser.Attributes;
 
 [System.AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
 

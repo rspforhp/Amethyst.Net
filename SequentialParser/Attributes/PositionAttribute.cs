@@ -1,4 +1,4 @@
-namespace SequentialParser.AutoParser;
+namespace SequentialParser.Attributes;
 /// <summary>
 /// Anotate fields with this for auto parser order, u must put this on constant fields as they do not preserve their order
 /// </summary>

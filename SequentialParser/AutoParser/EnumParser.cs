@@ -11,12 +11,12 @@ public class EnumParser : ClassParser
     }
     public override object Parse(ref SimpleStringReader reader,FieldInfo optionalField)
     {
-        reader.SkipWhitespace();
+        //reader.SkipWhitespace();
         foreach (var eVal in autoType.GetEnumValues())
         {
             if (reader.Exists(eVal.ToString(), true))
             {
-                reader.SkipWhitespace();
+                //reader.SkipWhitespace();
                 return eVal;
             }
         }

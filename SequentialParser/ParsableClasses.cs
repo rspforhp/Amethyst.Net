@@ -1,4 +1,5 @@
 using System.Reflection;
+using SequentialParser.Attributes;
 using SequentialParser.AutoParser;
 using SequentialParser.ManualParser;
 
@@ -52,13 +53,25 @@ public static class ParsableClasses
         foreach (var pair in Classes) if (pair.Key.IsAssignableTo(t)) return pair.Value;
         return null;
     }
+
+
+    public static event Action<Type, FieldInfo, object,Exception> OnParse = delegate(Type type,FieldInfo optionalField,object parsed,Exception error)
+    {
+        Console.WriteLine($"{type} {optionalField} {parsed} {error?.Message}");
+    }; 
+    
     public static object Parse(ref SimpleStringReader reader,Type t,FieldInfo optionalField)
     {
         var oldPos = reader.Position;
         try
         {
             var parser = GetCompatibleParser(t);
+
+            SkipWhitespaceAttribute skipWhitespace = optionalField==null?null:optionalField.GetCustomAttribute<SkipWhitespaceAttribute>();
+            if (skipWhitespace is { Before: true }) reader.SkipWhitespace();
             var o = parser.Parse(ref reader,optionalField);
+            OnParse(t, optionalField, o,null);
+            if (skipWhitespace is { After: true }) reader.SkipWhitespace();
             if (o == null || !o.GetType().IsAssignableTo(t))
             {
                 reader.Position = oldPos;
@@ -68,6 +81,7 @@ public static class ParsableClasses
         }
         catch (Exception e)
         {
+            OnParse(t, optionalField,null,e);
             LastException = e;
             Console.WriteLine(e);
             reader.Position = oldPos;

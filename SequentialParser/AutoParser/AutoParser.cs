@@ -1,4 +1,5 @@
 using System.Reflection;
+using SequentialParser.Attributes;
 
 namespace SequentialParser.AutoParser;
 
