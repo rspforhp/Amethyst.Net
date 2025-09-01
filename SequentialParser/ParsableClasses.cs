@@ -16,6 +16,7 @@ public static class ParsableClasses
     {
         Register<int,IntParser>();
         Register<string,StringParser>();
+        Register<char,CharParser>();
     }
 
     

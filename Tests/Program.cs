@@ -122,17 +122,23 @@ public abstract class Program
 
         public CloseCurlyBracket _methodClose;
     }
+
+
+    public struct Digit
+    {
+        [CharRange('0','9')]
+        public  char digit;
+    }
+    
+    
+    
     public static void Main(string[] args)
     {
         ParsableClasses.RegisterAll<Program>();
         var reader = new SimpleStringReader("""
-                                            public abstract sealed class Test{
-                                                public static void MethodTest(){
-                                                
-                                                }
-                                            }
+                                            0123ab
                                             """);
-        var testInt = ParsableClasses.Parse<ClassParsing>(ref reader);
+        var testInt = ParsableClasses.Parse<Digit>(ref reader);
         var exc = ParsableClasses.LastException;
         Console.WriteLine(testInt);
     }
